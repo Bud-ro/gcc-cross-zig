@@ -115,6 +115,10 @@ pub const CrossConfig = struct {
     /// addCopyDirectory to create a patched source tree.
     gcc_source_root_override: ?std.Build.LazyPath = null,
 
+    /// Override for binutils source root. When set, all binutils compilation
+    /// uses this directory instead of binutils_src.path(".").
+    binutils_source_root_override: ?std.Build.LazyPath = null,
+
     // -----------------------------------------------------------------
     // Source override support (optional)
     // -----------------------------------------------------------------

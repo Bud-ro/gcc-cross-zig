@@ -24,11 +24,17 @@ pub fn buildToolchain(
     optimize: std.builtin.OptimizeMode,
     config: CrossConfig,
 ) void {
+    // Resolve binutils source root: use override if provided, else upstream
+    const binutils_root = if (config.binutils_source_root_override) |ovr|
+        ovr
+    else
+        binutils_src.path(".");
+
     // Build libraries
-    const iberty = binutils_libs.addLibiberty(b, binutils_src, host_target, optimize);
-    const libsframe = binutils_libs.addLibsframe(b, binutils_src, host_target, optimize, config);
-    const bfd_result = binutils_libs.addLibbfd(b, binutils_src, host_target, optimize, iberty, libsframe, config);
-    const libopcodes = binutils_libs.addLibopcodes(b, binutils_src, host_target, optimize, bfd_result.bfd_header, config);
+    const iberty = binutils_libs.addLibiberty(b, binutils_root, host_target, optimize);
+    const libsframe = binutils_libs.addLibsframe(b, binutils_root, host_target, optimize, config);
+    const bfd_result = binutils_libs.addLibbfd(b, binutils_root, host_target, optimize, iberty, libsframe, config);
+    const libopcodes = binutils_libs.addLibopcodes(b, binutils_root, host_target, optimize, bfd_result.bfd_header, config);
 
     const libs = Libs{
         .iberty = iberty,
@@ -41,9 +47,9 @@ pub fn buildToolchain(
     };
 
     // Build binutils executables
-    const gas = binutils_gas.addGas(b, binutils_src, host_target, optimize, libs, config);
-    const ld = binutils_ld.addLd(b, binutils_src, host_target, optimize, libs, config);
-    const ar = binutils_tools.addTools(b, binutils_src, host_target, optimize, libs, config);
+    const gas = binutils_gas.addGas(b, binutils_root, host_target, optimize, libs, config);
+    const ld = binutils_ld.addLd(b, binutils_root, host_target, optimize, libs, config);
+    const ar = binutils_tools.addTools(b, binutils_root, host_target, optimize, libs, config);
 
     // Build GCC cc1 and driver
     _ = gcc_cc1.addCc1(b, gcc_src, host_target, optimize, iberty, config);

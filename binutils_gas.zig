@@ -6,7 +6,7 @@ const Libs = cross_config.Libs;
 
 pub fn addGas(
     b: *std.Build,
-    upstream: *std.Build.Dependency,
+    binutils_root: std.Build.LazyPath,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
     libs: Libs,
@@ -15,7 +15,7 @@ pub fn addGas(
     // gas/config.in has these #undef entries (binutils 2.42).
     // Values come from the reference cross-build config.h.
     const gas_config_header = b.addConfigHeader(.{
-        .style = .{ .autoconf_undef = upstream.path("gas/config.in") },
+        .style = .{ .autoconf_undef = binutils_root.path(b,"gas/config.in") },
     }, .{
         .AC_APPLE_UNIVERSAL_BUILD = null,
         .AIX_WEAK_SUPPORT = null,
@@ -148,17 +148,17 @@ pub fn addGas(
     gas.root_module.linkLibrary(libs.libsframe);
     gas.root_module.linkSystemLibrary("z", .{});
 
-    gas.root_module.addIncludePath(upstream.path("gas"));
-    gas.root_module.addIncludePath(upstream.path("gas/config"));
-    gas.root_module.addIncludePath(upstream.path("include"));
-    gas.root_module.addIncludePath(upstream.path("bfd"));
-    gas.root_module.addIncludePath(upstream.path("opcodes"));
-    gas.root_module.addIncludePath(upstream.path("")); // source root for bfd/elf-bfd.h
+    gas.root_module.addIncludePath(binutils_root.path(b,"gas"));
+    gas.root_module.addIncludePath(binutils_root.path(b,"gas/config"));
+    gas.root_module.addIncludePath(binutils_root.path(b,"include"));
+    gas.root_module.addIncludePath(binutils_root.path(b,"bfd"));
+    gas.root_module.addIncludePath(binutils_root.path(b,"opcodes"));
+    gas.root_module.addIncludePath(binutils_root.path(b,"")); // source root for bfd/elf-bfd.h
     gas.root_module.addIncludePath(config.include_dir); // generated headers
 
     // Core gas sources
     gas.root_module.addCSourceFiles(.{
-        .root = upstream.path("gas"),
+        .root = binutils_root.path(b,"gas"),
         .files = &.{
             "as.c",
             "app.c",
@@ -201,7 +201,7 @@ pub fn addGas(
 
     // Target-specific sources
     gas.root_module.addCSourceFiles(.{
-        .root = upstream.path("gas/config"),
+        .root = binutils_root.path(b,"gas/config"),
         .files = config.gas_target_srcs,
     });
 
