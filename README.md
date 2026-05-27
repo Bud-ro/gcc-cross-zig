@@ -6,6 +6,9 @@ This repo contains only build logic. It does not produce binaries on its own. Ta
 
 - [gcc-rl78-zig](https://github.com/Bud-ro/gcc-rl78-zig) -- Renesas RL78 (16-bit)
 - [gcc-rx-zig](https://github.com/Bud-ro/gcc-rx-zig) -- Renesas RX (32-bit CISC)
+- [gcc-v850-zig](https://github.com/Bud-ro/gcc-v850-zig) -- Renesas V850 (32-bit, automotive)
+- [gcc-sh-zig](https://github.com/Bud-ro/gcc-sh-zig) -- Renesas SuperH (32-bit RISC)
+- [gcc-h8300-zig](https://github.com/Bud-ro/gcc-h8300-zig) -- Renesas H8/300 (16/32-bit)
 
 ## How it works
 
