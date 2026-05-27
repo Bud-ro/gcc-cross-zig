@@ -561,17 +561,17 @@ fn filterFiles(
     files: []const []const u8,
     excludes: []const []const u8,
 ) []const []const u8 {
-    var result = std.ArrayList([]const u8).init(b.allocator);
+    var result = std.ArrayListUnmanaged([]const u8){};
     for (files) |f| {
-        var dominated = false;
+        var excluded = false;
         for (excludes) |ex| {
             if (std.mem.eql(u8, f, ex)) {
-                dominated = true;
+                excluded = true;
                 break;
             }
         }
-        if (!dominated) {
-            result.append(f) catch @panic("OOM");
+        if (!excluded) {
+            result.append(b.allocator, f) catch @panic("OOM");
         }
     }
     return result.items;
