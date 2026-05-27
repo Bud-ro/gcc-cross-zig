@@ -620,6 +620,12 @@ pub fn addLibbfd(
     bfd.root_module.addCSourceFile(.{
         .file = upstream.path(b.fmt("bfd/{s}", .{config.bfd_cpu_arch_src})),
     });
+    // Extra architecture files (e.g. cpu-v850_rh850.c for v850)
+    for (config.bfd_extra_cpu_arch_srcs) |src| {
+        bfd.root_module.addCSourceFile(.{
+            .file = upstream.path(b.fmt("bfd/{s}", .{src})),
+        });
+    }
 
     // targets.c and archures.c with vector defines
     for (config.bfd_select_vectors) |vec| {
@@ -730,11 +736,16 @@ pub fn addLibopcodes(
         .files = config.opcodes_target_srcs,
     });
 
-    // disassemble.c with architecture define
+    // disassemble.c with architecture define(s)
+    const arch_flags = b.allocator.alloc([]const u8, 1 + config.opcodes_extra_arch_flags.len) catch @panic("OOM");
+    arch_flags[0] = config.opcodes_arch_flag;
+    for (config.opcodes_extra_arch_flags, 0..) |flag, i| {
+        arch_flags[1 + i] = flag;
+    }
     libopcodes.root_module.addCSourceFiles(.{
         .root = upstream.path("opcodes"),
         .files = &.{"disassemble.c"},
-        .flags = &.{config.opcodes_arch_flag},
+        .flags = arch_flags,
     });
 
     return libopcodes;

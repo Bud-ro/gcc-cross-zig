@@ -164,10 +164,15 @@ pub fn addLd(
         },
     });
 
-    // Vendored emulation file
+    // Vendored emulation file(s)
     ld.root_module.addCSourceFile(.{
         .file = config.ld_emulation_file,
     });
+    for (config.ld_extra_emulation_files) |emul_file| {
+        ld.root_module.addCSourceFile(.{
+            .file = emul_file,
+        });
+    }
 
     return ld;
 }

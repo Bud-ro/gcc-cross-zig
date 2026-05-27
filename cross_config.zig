@@ -41,6 +41,8 @@ pub const CrossConfig = struct {
     bfd_elf_target_srcs: []const []const u8,
     /// BFD CPU architecture file, e.g. "cpu-rl78.c"
     bfd_cpu_arch_src: []const u8,
+    /// Extra BFD CPU architecture files (e.g. "cpu-v850_rh850.c" for v850)
+    bfd_extra_cpu_arch_srcs: []const []const u8 = &.{},
 
     // -----------------------------------------------------------------
     // Opcodes configuration
@@ -50,6 +52,8 @@ pub const CrossConfig = struct {
     opcodes_target_srcs: []const []const u8,
     /// Opcodes architecture flag, e.g. "-DARCH_rl78"
     opcodes_arch_flag: []const u8,
+    /// Extra opcodes architecture flags (e.g. "-DARCH_v850_rh850" for v850)
+    opcodes_extra_arch_flags: []const []const u8 = &.{},
 
     // -----------------------------------------------------------------
     // GAS (assembler) configuration
@@ -68,6 +72,8 @@ pub const CrossConfig = struct {
     ld_default_emulation: []const u8,
     /// Path to vendored LD emulation file (relative to consumer repo)
     ld_emulation_file: std.Build.LazyPath,
+    /// Extra vendored LD emulation files (for targets with multiple emulations)
+    ld_extra_emulation_files: []const std.Build.LazyPath = &.{},
 
     // -----------------------------------------------------------------
     // GCC cc1 configuration
