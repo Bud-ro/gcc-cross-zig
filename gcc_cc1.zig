@@ -561,7 +561,9 @@ fn filterFiles(
     files: []const []const u8,
     excludes: []const []const u8,
 ) []const []const u8 {
-    var result = std.ArrayListUnmanaged([]const u8){};
+    const gpa = b.allocator;
+    var buf = gpa.alloc([]const u8, files.len) catch @panic("OOM");
+    var count: usize = 0;
     for (files) |f| {
         var excluded = false;
         for (excludes) |ex| {
@@ -571,10 +573,11 @@ fn filterFiles(
             }
         }
         if (!excluded) {
-            result.append(b.allocator, f) catch @panic("OOM");
+            buf[count] = f;
+            count += 1;
         }
     }
-    return result.items;
+    return buf[0..count];
 }
 
 /// Concatenate two flag slices.
