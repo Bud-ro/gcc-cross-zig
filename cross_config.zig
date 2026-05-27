@@ -110,6 +110,11 @@ pub const CrossConfig = struct {
     /// Path to find_replace.zig tool (from gcc-cross-zig)
     find_replace_zig: std.Build.LazyPath,
 
+    /// Override for GCC source root. When set, cc1 compilation uses this
+    /// directory instead of gcc_src.path("."). Use with addWriteFiles +
+    /// addCopyDirectory to create a patched source tree.
+    gcc_source_root_override: ?std.Build.LazyPath = null,
+
     // -----------------------------------------------------------------
     // Source override support (optional)
     // -----------------------------------------------------------------

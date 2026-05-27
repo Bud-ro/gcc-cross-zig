@@ -189,6 +189,12 @@ pub fn addCc1(
     const config_path: std.Build.LazyPath = config.config_dir;
     const generated_path: std.Build.LazyPath = config.generated_dir;
 
+    // Resolve GCC source root: use override if provided, else upstream
+    const gcc_root = if (config.gcc_source_root_override) |ovr|
+        ovr
+    else
+        gcc_src.path(".");
+
     // Include paths (order matters!)
     // Build dir (generated/ and config/ dirs)
     exe.root_module.addIncludePath(generated_path);
@@ -197,20 +203,20 @@ pub fn addCc1(
     for (config.gcc_extra_include_dirs) |dir| {
         exe.root_module.addIncludePath(dir);
     }
-    // gcc source root
-    exe.root_module.addIncludePath(gcc_src.path("gcc"));
+    // gcc source root (possibly patched)
+    exe.root_module.addIncludePath(gcc_root.path(b, "gcc"));
     // shared includes
-    exe.root_module.addIncludePath(gcc_src.path("include"));
+    exe.root_module.addIncludePath(gcc_root.path(b, "include"));
     // libcpp headers
-    exe.root_module.addIncludePath(gcc_src.path("libcpp/include"));
+    exe.root_module.addIncludePath(gcc_root.path(b, "libcpp/include"));
     // libcody
-    exe.root_module.addIncludePath(gcc_src.path("libcody"));
+    exe.root_module.addIncludePath(gcc_root.path(b, "libcody"));
     // libdecnumber (source headers + config with gstdint.h)
-    exe.root_module.addIncludePath(gcc_src.path("libdecnumber"));
-    exe.root_module.addIncludePath(gcc_src.path("libdecnumber/dpd"));
+    exe.root_module.addIncludePath(gcc_root.path(b, "libdecnumber"));
+    exe.root_module.addIncludePath(gcc_root.path(b, "libdecnumber/dpd"));
     exe.root_module.addIncludePath(config.libdecnumber_config_dir);
     // libbacktrace
-    exe.root_module.addIncludePath(gcc_src.path("libbacktrace"));
+    exe.root_module.addIncludePath(gcc_root.path(b, "libbacktrace"));
 
     // Common C++ flags for GCC source
     const common_flags: []const []const u8 = &.{
@@ -241,14 +247,14 @@ pub fn addCc1(
     // -----------------------------------------------------------------
     if (config.gcc_exclude_objs.len == 0) {
         exe.root_module.addCSourceFiles(.{
-            .root = gcc_src.path("gcc"),
+            .root = gcc_root.path(b, "gcc"),
             .files = &objs_files,
             .flags = common_flags,
         });
     } else {
         const filtered = filterFiles(b, &objs_files, config.gcc_exclude_objs);
         exe.root_module.addCSourceFiles(.{
-            .root = gcc_src.path("gcc"),
+            .root = gcc_root.path(b, "gcc"),
             .files = filtered,
             .flags = common_flags,
         });
@@ -267,7 +273,7 @@ pub fn addCc1(
     // OBJS-libcommon: common library objects
     // -----------------------------------------------------------------
     exe.root_module.addCSourceFiles(.{
-        .root = gcc_src.path("gcc"),
+        .root = gcc_root.path(b, "gcc"),
         .files = &libcommon_files,
         .flags = common_flags,
     });
@@ -277,20 +283,20 @@ pub fn addCc1(
     // -----------------------------------------------------------------
     if (config.gcc_common_out_file.len > 0) {
         exe.root_module.addCSourceFile(.{
-            .file = gcc_src.path(b.fmt("gcc/{s}", .{config.gcc_common_out_file})),
+            .file = gcc_root.path(b, b.fmt("gcc/{s}", .{config.gcc_common_out_file})),
             .flags = common_flags,
         });
     }
     if (config.gcc_exclude_objs.len == 0) {
         exe.root_module.addCSourceFiles(.{
-            .root = gcc_src.path("gcc"),
+            .root = gcc_root.path(b, "gcc"),
             .files = &libcommon_target_files,
             .flags = common_flags,
         });
     } else {
         const filtered_common = filterFiles(b, &libcommon_target_files, config.gcc_exclude_objs);
         exe.root_module.addCSourceFiles(.{
-            .root = gcc_src.path("gcc"),
+            .root = gcc_root.path(b, "gcc"),
             .files = filtered_common,
             .flags = common_flags,
         });
@@ -300,7 +306,7 @@ pub fn addCc1(
     // ANALYZER_OBJS: static analyzer
     // -----------------------------------------------------------------
     exe.root_module.addCSourceFiles(.{
-        .root = gcc_src.path("gcc"),
+        .root = gcc_root.path(b, "gcc"),
         .files = &analyzer_files,
         .flags = common_flags,
     });
@@ -333,14 +339,14 @@ pub fn addCc1(
 
     if (config.gcc_exclude_frontend_srcs.len == 0) {
         exe.root_module.addCSourceFiles(.{
-            .root = gcc_src.path("gcc"),
+            .root = gcc_root.path(b, "gcc"),
             .files = &c_frontend_files,
             .flags = c_frontend_flags,
         });
     } else {
         const filtered = filterFiles(b, &c_frontend_files, config.gcc_exclude_frontend_srcs);
         exe.root_module.addCSourceFiles(.{
-            .root = gcc_src.path("gcc"),
+            .root = gcc_root.path(b, "gcc"),
             .files = filtered,
             .flags = c_frontend_flags,
         });
@@ -360,14 +366,14 @@ pub fn addCc1(
     // -----------------------------------------------------------------
     if (config.gcc_exclude_target_srcs.len == 0) {
         exe.root_module.addCSourceFiles(.{
-            .root = gcc_src.path("gcc"),
+            .root = gcc_root.path(b, "gcc"),
             .files = config.gcc_target_srcs,
             .flags = common_flags,
         });
     } else {
         const filtered = filterFiles(b, config.gcc_target_srcs, config.gcc_exclude_target_srcs);
         exe.root_module.addCSourceFiles(.{
-            .root = gcc_src.path("gcc"),
+            .root = gcc_root.path(b, "gcc"),
             .files = filtered,
             .flags = common_flags,
         });
@@ -395,7 +401,7 @@ pub fn addCc1(
     // main.o -- the cc1 entry point is main() in gcc/main.cc
     // -----------------------------------------------------------------
     exe.root_module.addCSourceFiles(.{
-        .root = gcc_src.path("gcc"),
+        .root = gcc_root.path(b, "gcc"),
         .files = &.{"main.cc"},
         .flags = common_flags,
     });
@@ -514,7 +520,7 @@ pub fn addGccDriver(
     // And libcommon-target objects
     if (config.gcc_common_out_file.len > 0) {
         exe.root_module.addCSourceFile(.{
-            .file = gcc_src.path(b.fmt("gcc/{s}", .{config.gcc_common_out_file})),
+            .file = gcc_root.path(b, b.fmt("gcc/{s}", .{config.gcc_common_out_file})),
             .flags = driver_flags,
         });
     }
