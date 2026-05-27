@@ -1,0 +1,18 @@
+.{
+    .name = .gcc_cross,
+    .version = "0.1.0",
+    .fingerprint = 0x56d850e51547e1e1,
+    .minimum_zig_version = "0.16.0",
+    .dependencies = .{},
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "cross_config.zig",
+        "binutils_libs.zig",
+        "binutils_gas.zig",
+        "binutils_ld.zig",
+        "binutils_tools.zig",
+        "gcc_cc1.zig",
+        "find_replace.zig",
+    },
+}
