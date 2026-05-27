@@ -517,10 +517,10 @@ pub fn addGccDriver(
         .flags = driver_flags,
     });
 
-    // And libcommon-target objects
+    // And libcommon-target objects (driver always uses upstream)
     if (config.gcc_common_out_file.len > 0) {
         exe.root_module.addCSourceFile(.{
-            .file = gcc_root.path(b, b.fmt("gcc/{s}", .{config.gcc_common_out_file})),
+            .file = gcc_src.path(b.fmt("gcc/{s}", .{config.gcc_common_out_file})),
             .flags = driver_flags,
         });
     }
