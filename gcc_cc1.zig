@@ -262,6 +262,10 @@ pub fn addCc1(
     // -----------------------------------------------------------------
     // OBJS-libcommon-target: target-dependent common objects
     // -----------------------------------------------------------------
+    exe.root_module.addCSourceFile(.{
+        .file = gcc_src.path(b.fmt("gcc/{s}", .{config.gcc_common_out_file})),
+        .flags = common_flags,
+    });
     exe.root_module.addCSourceFiles(.{
         .root = gcc_src.path("gcc"),
         .files = &libcommon_target_files,
@@ -445,6 +449,10 @@ pub fn addGccDriver(
     });
 
     // And libcommon-target objects
+    exe.root_module.addCSourceFile(.{
+        .file = gcc_src.path(b.fmt("gcc/{s}", .{config.gcc_common_out_file})),
+        .flags = driver_flags,
+    });
     exe.root_module.addCSourceFiles(.{
         .root = gcc_src.path("gcc"),
         .files = &libcommon_target_files,
@@ -1018,10 +1026,8 @@ const libcommon_files = [_][]const u8{
     "text-art/widget.cc",
 };
 
-// OBJS-libcommon-target
+// OBJS-libcommon-target (common_out_file added dynamically via config.gcc_common_out_file)
 const libcommon_target_files = [_][]const u8{
-    // common_out_object_file = default-common.o
-    "common/config/default-common.cc",
     "prefix.cc",
     "opts.cc",
     "opts-common.cc",

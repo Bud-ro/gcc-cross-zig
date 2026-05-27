@@ -94,6 +94,8 @@ pub const CrossConfig = struct {
 
     /// GCC target-specific source files (relative to gcc/ in upstream)
     gcc_target_srcs: []const []const u8,
+    /// GCC common_out_file override (default: "common/config/default-common.cc")
+    gcc_common_out_file: []const u8 = "common/config/default-common.cc",
 
     // -----------------------------------------------------------------
     // Include paths for binutils (gas, ld, tools)
