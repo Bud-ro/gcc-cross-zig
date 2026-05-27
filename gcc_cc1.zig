@@ -514,20 +514,14 @@ pub fn addGccDriver(
         .file = gcc_src.path(b.fmt("gcc/{s}", .{config.gcc_common_out_file})),
         .flags = driver_flags,
     });
-    if (config.gcc_exclude_objs.len == 0) {
-        exe.root_module.addCSourceFiles(.{
-            .root = gcc_src.path("gcc"),
-            .files = &libcommon_target_files,
-            .flags = driver_flags,
-        });
-    } else {
-        const filtered_drv = filterFiles(b, &libcommon_target_files, config.gcc_exclude_objs);
-        exe.root_module.addCSourceFiles(.{
-            .root = gcc_src.path("gcc"),
-            .files = filtered_drv,
-            .flags = driver_flags,
-        });
-    }
+    // Driver always uses upstream libcommon_target files (no filtering).
+    // The patched changes to opts.cc etc. are cc1-only; the driver doesn't
+    // need target-specific patches.
+    exe.root_module.addCSourceFiles(.{
+        .root = gcc_src.path("gcc"),
+        .files = &libcommon_target_files,
+        .flags = driver_flags,
+    });
 
     // Generated options files
     exe.root_module.addCSourceFiles(.{
@@ -558,27 +552,10 @@ pub fn addGccDriver(
         .flags = driver_flags,
     });
 
-    // Extra source files that replace libcommon_target entries are also
-    // needed by the driver. Only add files that match excluded entries
-    // in libcommon_target_files (typically just opts.cc).
-    for (config.gcc_extra_source_files) |extra| {
-        const path = extra.file.getDisplayName();
-        var in_common_target = false;
-        for (&libcommon_target_files) |ctf| {
-            // Match the basename of the extra file against common_target entries
-            if (std.mem.endsWith(u8, path, ctf)) {
-                in_common_target = true;
-                break;
-            }
-        }
-        if (in_common_target) {
-            const flags = mergeFlags(b, driver_flags, extra.flags);
-            exe.root_module.addCSourceFile(.{
-                .file = extra.file,
-                .flags = flags,
-            });
-        }
-    }
+    // Note: the driver uses upstream libcommon_target files only.
+    // Patched source files (gcc_extra_source_files) are cc1-only.
+    // The driver's opts.cc changes are opt-level defaults which
+    // don't affect the driver's behavior.
 
     // Backtrace stub (replaces libbacktrace)
     exe.root_module.addCSourceFile(.{
