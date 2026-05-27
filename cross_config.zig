@@ -108,6 +108,47 @@ pub const CrossConfig = struct {
 
     /// Path to find_replace.zig tool (from gcc-cross-zig)
     find_replace_zig: std.Build.LazyPath,
+
+    // -----------------------------------------------------------------
+    // Source override support (optional)
+    // -----------------------------------------------------------------
+
+    /// Extra include directories added BEFORE upstream GCC includes,
+    /// so that patched headers shadow the originals.
+    gcc_extra_include_dirs: []const std.Build.LazyPath = &.{},
+
+    /// Extra source files compiled alongside the target-specific sources.
+    /// Use for patched .cc files that replace upstream originals, or for
+    /// entirely new source files (e.g. rx-pragma.c).
+    gcc_extra_source_files: []const ExtraSourceFile = &.{},
+
+    /// Upstream target source paths to EXCLUDE from compilation because
+    /// they are superseded by entries in gcc_extra_source_files.
+    /// Paths are relative to gcc/ in the upstream source (must match
+    /// entries in gcc_target_srcs exactly).
+    gcc_exclude_target_srcs: []const []const u8 = &.{},
+
+    /// Upstream OBJS paths to EXCLUDE from compilation because they are
+    /// superseded by entries in gcc_extra_source_files.
+    /// Paths are relative to gcc/ in the upstream source (must match
+    /// entries in the objs_files list exactly).
+    gcc_exclude_objs: []const []const u8 = &.{},
+
+    /// Extra source files for the C frontend. Same semantics as
+    /// gcc_extra_source_files but compiled with IN_GCC_FRONTEND flags.
+    gcc_extra_frontend_source_files: []const ExtraSourceFile = &.{},
+
+    /// Upstream C frontend paths to EXCLUDE from compilation.
+    /// Paths are relative to gcc/ in the upstream source (must match
+    /// entries in the c_frontend_files list exactly).
+    gcc_exclude_frontend_srcs: []const []const u8 = &.{},
+
+    pub const ExtraSourceFile = struct {
+        /// The replacement or new source file.
+        file: std.Build.LazyPath,
+        /// Extra compile flags for this file (beyond the common flags).
+        flags: []const []const u8 = &.{},
+    };
 };
 
 /// Shared library artifacts built by binutils_libs and passed to executables.

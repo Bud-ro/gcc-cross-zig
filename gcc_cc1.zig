@@ -193,6 +193,10 @@ pub fn addCc1(
     // Build dir (generated/ and config/ dirs)
     exe.root_module.addIncludePath(generated_path);
     exe.root_module.addIncludePath(config_path);
+    // Extra include dirs from consumer (patched headers shadow upstream)
+    for (config.gcc_extra_include_dirs) |dir| {
+        exe.root_module.addIncludePath(dir);
+    }
     // gcc source root
     exe.root_module.addIncludePath(gcc_src.path("gcc"));
     // shared includes
@@ -235,11 +239,20 @@ pub fn addCc1(
     // OBJS: Language-independent backend object files (~450 files)
     // From gcc/Makefile.in OBJS = ...
     // -----------------------------------------------------------------
-    exe.root_module.addCSourceFiles(.{
-        .root = gcc_src.path("gcc"),
-        .files = &objs_files,
-        .flags = common_flags,
-    });
+    if (config.gcc_exclude_objs.len == 0) {
+        exe.root_module.addCSourceFiles(.{
+            .root = gcc_src.path("gcc"),
+            .files = &objs_files,
+            .flags = common_flags,
+        });
+    } else {
+        const filtered = filterFiles(b, &objs_files, config.gcc_exclude_objs);
+        exe.root_module.addCSourceFiles(.{
+            .root = gcc_src.path("gcc"),
+            .files = filtered,
+            .flags = common_flags,
+        });
+    }
 
     // -----------------------------------------------------------------
     // Generated files from our vendored directory
@@ -307,20 +320,56 @@ pub fn addCc1(
         "-DIN_GCC_FRONTEND",
     };
 
-    exe.root_module.addCSourceFiles(.{
-        .root = gcc_src.path("gcc"),
-        .files = &c_frontend_files,
-        .flags = c_frontend_flags,
-    });
+    if (config.gcc_exclude_frontend_srcs.len == 0) {
+        exe.root_module.addCSourceFiles(.{
+            .root = gcc_src.path("gcc"),
+            .files = &c_frontend_files,
+            .flags = c_frontend_flags,
+        });
+    } else {
+        const filtered = filterFiles(b, &c_frontend_files, config.gcc_exclude_frontend_srcs);
+        exe.root_module.addCSourceFiles(.{
+            .root = gcc_src.path("gcc"),
+            .files = filtered,
+            .flags = c_frontend_flags,
+        });
+    }
+
+    // Extra frontend source files from consumer
+    for (config.gcc_extra_frontend_source_files) |extra| {
+        const merged_flags = mergeFlags(b, c_frontend_flags, extra.flags);
+        exe.root_module.addCSourceFile(.{
+            .file = extra.file,
+            .flags = merged_flags,
+        });
+    }
 
     // -----------------------------------------------------------------
     // Target-specific files
     // -----------------------------------------------------------------
-    exe.root_module.addCSourceFiles(.{
-        .root = gcc_src.path("gcc"),
-        .files = config.gcc_target_srcs,
-        .flags = common_flags,
-    });
+    if (config.gcc_exclude_target_srcs.len == 0) {
+        exe.root_module.addCSourceFiles(.{
+            .root = gcc_src.path("gcc"),
+            .files = config.gcc_target_srcs,
+            .flags = common_flags,
+        });
+    } else {
+        const filtered = filterFiles(b, config.gcc_target_srcs, config.gcc_exclude_target_srcs);
+        exe.root_module.addCSourceFiles(.{
+            .root = gcc_src.path("gcc"),
+            .files = filtered,
+            .flags = common_flags,
+        });
+    }
+
+    // Extra source files from consumer (patched replacements or new files)
+    for (config.gcc_extra_source_files) |extra| {
+        const merged_flags = mergeFlags(b, common_flags, extra.flags);
+        exe.root_module.addCSourceFile(.{
+            .file = extra.file,
+            .flags = merged_flags,
+        });
+    }
 
     // -----------------------------------------------------------------
     // cc1-checksum (from generated)
@@ -392,6 +441,10 @@ pub fn addGccDriver(
 
     exe.root_module.addIncludePath(generated_path);
     exe.root_module.addIncludePath(config_path);
+    // Extra include dirs from consumer (patched headers shadow upstream)
+    for (config.gcc_extra_include_dirs) |dir| {
+        exe.root_module.addIncludePath(dir);
+    }
     exe.root_module.addIncludePath(gcc_src.path("gcc"));
     exe.root_module.addIncludePath(gcc_src.path("include"));
     exe.root_module.addIncludePath(gcc_src.path("libcpp/include"));
@@ -496,6 +549,45 @@ pub fn addGccDriver(
     b.installArtifact(exe);
 
     return exe;
+}
+
+// =========================================================================
+// Helpers
+// =========================================================================
+
+/// Return a filtered copy of `files` with any entries present in `excludes` removed.
+fn filterFiles(
+    b: *std.Build,
+    files: []const []const u8,
+    excludes: []const []const u8,
+) []const []const u8 {
+    var result = std.ArrayList([]const u8).init(b.allocator);
+    for (files) |f| {
+        var dominated = false;
+        for (excludes) |ex| {
+            if (std.mem.eql(u8, f, ex)) {
+                dominated = true;
+                break;
+            }
+        }
+        if (!dominated) {
+            result.append(f) catch @panic("OOM");
+        }
+    }
+    return result.items;
+}
+
+/// Concatenate two flag slices.
+fn mergeFlags(
+    b: *std.Build,
+    base: []const []const u8,
+    extra: []const []const u8,
+) []const []const u8 {
+    if (extra.len == 0) return base;
+    const merged = b.allocator.alloc([]const u8, base.len + extra.len) catch @panic("OOM");
+    @memcpy(merged[0..base.len], base);
+    @memcpy(merged[base.len..], extra);
+    return merged;
 }
 
 // =========================================================================
@@ -1139,4 +1231,3 @@ const c_frontend_files = [_][]const u8{
     // c/gccspec.o
     "c/gccspec.cc",
 };
-
