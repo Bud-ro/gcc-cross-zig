@@ -70,6 +70,24 @@ pub fn buildToolchain(
     const mkdir_step = b.addSystemCommand(&.{ "mkdir", "-p" });
     mkdir_step.addArg(b.fmt("{s}/{s}", .{ b.install_path, lib_gcc_dir }));
     b.getInstallStep().dependOn(&mkdir_step.step);
+
+    // Install GCC internal headers (stdarg.h, stddef.h, etc.) to
+    // lib/gcc/<target>/<version>/include/ so the driver finds them
+    // via -print-file-name=include.
+    const include_dir = b.fmt("{s}/include", .{lib_gcc_dir});
+    const ginclude_headers = [_][]const u8{
+        "stdarg.h",    "stddef.h",    "stdbool.h",   "stdint-gcc.h",
+        "stdatomic.h", "stdalign.h",  "stdnoreturn.h", "float.h",
+        "iso646.h",    "stdfix.h",    "varargs.h",   "stdckdint.h",
+        "tgmath.h",    "stdint-wrap.h",
+    };
+    for (ginclude_headers) |hdr| {
+        const install_hdr = b.addInstallFile(
+            gcc_src.path(b.fmt("gcc/ginclude/{s}", .{hdr})),
+            b.fmt("{s}/{s}", .{ include_dir, hdr }),
+        );
+        b.getInstallStep().dependOn(&install_hdr.step);
+    }
 }
 
 pub fn build(b: *std.Build) void {
