@@ -560,14 +560,19 @@ pub fn addGccDriver(
     });
 
     // Extra source files that replace libcommon_target entries are also
-    // needed by the driver. Skip target-specific files (config/ paths)
-    // since the driver doesn't compile target backend code.
+    // needed by the driver. Only add files that match excluded entries
+    // in libcommon_target_files (typically just opts.cc).
     for (config.gcc_extra_source_files) |extra| {
-        // Check if this file replaces something in libcommon_target_files
-        // by checking if the corresponding upstream was excluded
         const path = extra.file.getDisplayName();
-        const is_target_specific = std.mem.indexOf(u8, path, "config/") != null;
-        if (!is_target_specific) {
+        var in_common_target = false;
+        for (&libcommon_target_files) |ctf| {
+            // Match the basename of the extra file against common_target entries
+            if (std.mem.endsWith(u8, path, ctf)) {
+                in_common_target = true;
+                break;
+            }
+        }
+        if (in_common_target) {
             const flags = mergeFlags(b, driver_flags, extra.flags);
             exe.root_module.addCSourceFile(.{
                 .file = extra.file,
