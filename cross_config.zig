@@ -94,7 +94,8 @@ pub const CrossConfig = struct {
 
     /// GCC target-specific source files (relative to gcc/ in upstream)
     gcc_target_srcs: []const []const u8,
-    /// GCC common_out_file override (default: "common/config/default-common.cc")
+    /// GCC common_out_file override (default: "common/config/default-common.cc").
+    /// Set to "" to skip (when providing the common file via gcc_extra_source_files).
     gcc_common_out_file: []const u8 = "common/config/default-common.cc",
 
     // -----------------------------------------------------------------

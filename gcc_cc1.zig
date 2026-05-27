@@ -275,10 +275,12 @@ pub fn addCc1(
     // -----------------------------------------------------------------
     // OBJS-libcommon-target: target-dependent common objects
     // -----------------------------------------------------------------
-    exe.root_module.addCSourceFile(.{
-        .file = gcc_src.path(b.fmt("gcc/{s}", .{config.gcc_common_out_file})),
-        .flags = common_flags,
-    });
+    if (config.gcc_common_out_file.len > 0) {
+        exe.root_module.addCSourceFile(.{
+            .file = gcc_src.path(b.fmt("gcc/{s}", .{config.gcc_common_out_file})),
+            .flags = common_flags,
+        });
+    }
     if (config.gcc_exclude_objs.len == 0) {
         exe.root_module.addCSourceFiles(.{
             .root = gcc_src.path("gcc"),
@@ -510,10 +512,12 @@ pub fn addGccDriver(
     });
 
     // And libcommon-target objects
-    exe.root_module.addCSourceFile(.{
-        .file = gcc_src.path(b.fmt("gcc/{s}", .{config.gcc_common_out_file})),
-        .flags = driver_flags,
-    });
+    if (config.gcc_common_out_file.len > 0) {
+        exe.root_module.addCSourceFile(.{
+            .file = gcc_src.path(b.fmt("gcc/{s}", .{config.gcc_common_out_file})),
+            .flags = driver_flags,
+        });
+    }
     // Driver always uses upstream libcommon_target files (no filtering).
     // The patched changes to opts.cc etc. are cc1-only; the driver doesn't
     // need target-specific patches.
