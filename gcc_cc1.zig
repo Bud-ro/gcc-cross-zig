@@ -279,11 +279,20 @@ pub fn addCc1(
         .file = gcc_src.path(b.fmt("gcc/{s}", .{config.gcc_common_out_file})),
         .flags = common_flags,
     });
-    exe.root_module.addCSourceFiles(.{
-        .root = gcc_src.path("gcc"),
-        .files = &libcommon_target_files,
-        .flags = common_flags,
-    });
+    if (config.gcc_exclude_objs.len == 0) {
+        exe.root_module.addCSourceFiles(.{
+            .root = gcc_src.path("gcc"),
+            .files = &libcommon_target_files,
+            .flags = common_flags,
+        });
+    } else {
+        const filtered_common = filterFiles(b, &libcommon_target_files, config.gcc_exclude_objs);
+        exe.root_module.addCSourceFiles(.{
+            .root = gcc_src.path("gcc"),
+            .files = filtered_common,
+            .flags = common_flags,
+        });
+    }
 
     // -----------------------------------------------------------------
     // ANALYZER_OBJS: static analyzer
@@ -506,11 +515,20 @@ pub fn addGccDriver(
         .file = gcc_src.path(b.fmt("gcc/{s}", .{config.gcc_common_out_file})),
         .flags = driver_flags,
     });
-    exe.root_module.addCSourceFiles(.{
-        .root = gcc_src.path("gcc"),
-        .files = &libcommon_target_files,
-        .flags = driver_flags,
-    });
+    if (config.gcc_exclude_objs.len == 0) {
+        exe.root_module.addCSourceFiles(.{
+            .root = gcc_src.path("gcc"),
+            .files = &libcommon_target_files,
+            .flags = driver_flags,
+        });
+    } else {
+        const filtered_drv = filterFiles(b, &libcommon_target_files, config.gcc_exclude_objs);
+        exe.root_module.addCSourceFiles(.{
+            .root = gcc_src.path("gcc"),
+            .files = filtered_drv,
+            .flags = driver_flags,
+        });
+    }
 
     // Generated options files
     exe.root_module.addCSourceFiles(.{
