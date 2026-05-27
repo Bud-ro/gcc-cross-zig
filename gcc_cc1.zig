@@ -450,10 +450,9 @@ pub fn addGccDriver(
 
     exe.root_module.addIncludePath(generated_path);
     exe.root_module.addIncludePath(config_path);
-    // Extra include dirs from consumer (patched headers shadow upstream)
-    for (config.gcc_extra_include_dirs) |dir| {
-        exe.root_module.addIncludePath(dir);
-    }
+    // Driver does NOT get extra include dirs -- those contain patched headers
+    // (tree.h, output.h) that reference cc1-only symbols. The driver only
+    // needs the upstream headers.
     exe.root_module.addIncludePath(gcc_src.path("gcc"));
     exe.root_module.addIncludePath(gcc_src.path("include"));
     exe.root_module.addIncludePath(gcc_src.path("libcpp/include"));
