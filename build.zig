@@ -88,6 +88,20 @@ pub fn buildToolchain(
         );
         b.getInstallStep().dependOn(&install_hdr.step);
     }
+
+    // Install glimits.h as limits.h (GCC renames it during install)
+    const install_limits = b.addInstallFile(
+        gcc_src.path("gcc/glimits.h"),
+        b.fmt("{s}/limits.h", .{include_dir}),
+    );
+    b.getInstallStep().dependOn(&install_limits.step);
+
+    // Install stdint-gcc.h as stdint.h for freestanding (no newlib/libc)
+    const install_stdint = b.addInstallFile(
+        gcc_src.path("gcc/ginclude/stdint-gcc.h"),
+        b.fmt("{s}/stdint.h", .{include_dir}),
+    );
+    b.getInstallStep().dependOn(&install_stdint.step);
 }
 
 pub fn build(b: *std.Build) void {
