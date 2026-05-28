@@ -158,6 +158,10 @@ pub fn addCc1(
     optimize: std.builtin.OptimizeMode,
     iberty: *std.Build.Step.Compile,
     config: CrossConfig,
+    // When set, generated files come from these build-time dirs instead of the
+    // vendored config.generated_dir. gt_dir holds the gt-*.h headers.
+    gen_dir: ?std.Build.LazyPath,
+    gt_dir: ?std.Build.LazyPath,
 ) *std.Build.Step.Compile {
     const libdecnumber = addLibdecnumber(b, gcc_src, target, optimize, config);
     const libcpp = addLibcpp(b, gcc_src, target, optimize, config);
@@ -187,7 +191,7 @@ pub fn addCc1(
 
     // Paths for vendored config and generated files (from consumer repo)
     const config_path: std.Build.LazyPath = config.config_dir;
-    const generated_path: std.Build.LazyPath = config.generated_dir;
+    const generated_path: std.Build.LazyPath = gen_dir orelse config.generated_dir orelse @panic("no generated_dir and no build-time generation");
 
     // Resolve GCC source root: use override if provided, else upstream
     const gcc_root = if (config.gcc_source_root_override) |ovr|
@@ -198,6 +202,7 @@ pub fn addCc1(
     // Include paths (order matters!)
     // Build dir (generated/ and config/ dirs)
     exe.root_module.addIncludePath(generated_path);
+    if (gt_dir) |d| exe.root_module.addIncludePath(d); // gt-*.h
     exe.root_module.addIncludePath(config_path);
     // Extra include dirs from consumer (patched headers shadow upstream)
     for (config.gcc_extra_include_dirs) |dir| {
@@ -434,6 +439,7 @@ pub fn addGccDriver(
     optimize: std.builtin.OptimizeMode,
     iberty: *std.Build.Step.Compile,
     config: CrossConfig,
+    gen_dir: ?std.Build.LazyPath,
 ) *std.Build.Step.Compile {
     const libcpp = addLibcpp(b, gcc_src, target, optimize, config);
     const libcody = addLibcody(b, gcc_src, target, optimize, config);
@@ -454,7 +460,7 @@ pub fn addGccDriver(
 
     // Paths (from consumer repo)
     const config_path: std.Build.LazyPath = config.config_dir;
-    const generated_path: std.Build.LazyPath = config.generated_dir;
+    const generated_path: std.Build.LazyPath = gen_dir orelse config.generated_dir orelse @panic("no generated_dir and no build-time generation");
 
     exe.root_module.addIncludePath(generated_path);
     exe.root_module.addIncludePath(config_path);

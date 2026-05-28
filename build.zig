@@ -11,6 +11,7 @@ pub const binutils_gas = @import("binutils_gas.zig");
 pub const binutils_ld = @import("binutils_ld.zig");
 pub const binutils_tools = @import("binutils_tools.zig");
 pub const gcc_cc1 = @import("gcc_cc1.zig");
+pub const gen_tools = @import("gen_tools.zig");
 
 pub const CrossConfig = cross_config.CrossConfig;
 pub const Libs = cross_config.Libs;
@@ -51,12 +52,30 @@ pub fn buildToolchain(
     const ld = binutils_ld.addLd(b, binutils_root, host_target, optimize, libs, config);
     const ar = binutils_tools.addTools(b, binutils_root, host_target, optimize, libs, config);
 
+    const gcc_root = if (config.gcc_source_root_override) |ovr| ovr else gcc_src.path(".");
+
+    // Build-time generation is opt-in per target: a target that supplies the
+    // generator inputs (gtyp_input_list) generates everything from source and
+    // needs no vendored generated/ dir. Targets without it fall back to the
+    // vendored config.generated_dir.
+    var gen_dir: ?std.Build.LazyPath = null;
+    var gt_dir: ?std.Build.LazyPath = null;
+    if (config.gtyp_input_list != null) {
+        const host_libcpp = gcc_cc1.addLibcpp(b, gcc_src, host_target, optimize, config);
+        const generated = gen_tools.addGenerated(b, gcc_root, host_target, optimize, iberty, host_libcpp, config);
+        gen_dir = generated.dir;
+        gt_dir = generated.gt_dir;
+        // When a vendored dir is still present, register a regression check.
+        if (config.generated_dir) |oracle| {
+            gen_tools.addVerify(b, generated, oracle, &.{});
+        }
+    }
+
     // Build GCC cc1 and driver
-    _ = gcc_cc1.addCc1(b, gcc_src, host_target, optimize, iberty, config);
-    _ = gcc_cc1.addGccDriver(b, gcc_src, host_target, optimize, iberty, config);
+    _ = gcc_cc1.addCc1(b, gcc_src, host_target, optimize, iberty, config, gen_dir, gt_dir);
+    _ = gcc_cc1.addGccDriver(b, gcc_src, host_target, optimize, iberty, config, gen_dir);
 
     // Build LTO plugin (shared library loaded by the linker)
-    const gcc_root = if (config.gcc_source_root_override) |ovr| ovr else gcc_src.path(".");
     const lto_config = b.addConfigHeader(.{
         .style = .{ .autoconf_undef = gcc_root.path(b, "lto-plugin/config.h.in") },
     }, .{

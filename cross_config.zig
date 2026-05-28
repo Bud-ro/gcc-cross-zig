@@ -81,8 +81,10 @@ pub const CrossConfig = struct {
     // GCC cc1 configuration
     // -----------------------------------------------------------------
 
-    /// Path to generated/ dir for this target (relative to consumer repo)
-    generated_dir: std.Build.LazyPath,
+    /// Path to vendored generated/ dir (relative to consumer repo). Optional:
+    /// targets that set up build-time generation (gtyp_input_list etc.) leave
+    /// this null and generate everything from source instead.
+    generated_dir: ?std.Build.LazyPath = null,
     /// Path to config/<target>/ dir (relative to consumer repo)
     config_dir: std.Build.LazyPath,
     /// Path to config/libcpp/ dir
@@ -96,6 +98,21 @@ pub const CrossConfig = struct {
 
     /// GCC target-specific source files (relative to gcc/ in upstream)
     gcc_target_srcs: []const []const u8,
+    /// Target-specific .opt files (relative to gcc/ in upstream), e.g.
+    /// "config/rx/rx.opt". Used by the options generator (opth-gen.awk).
+    gcc_target_opt_files: []const []const u8 = &.{},
+    /// gengtype input manifest (the GTFILES list) with the source root spelled
+    /// as the literal token @GCCSRC@. Rebased at build time. Build-input only.
+    gtyp_input_list: ?std.Build.LazyPath = null,
+    /// Source headers (paths relative to gcc/) to copy verbatim into the
+    /// build-time generated dir at the same relative path. Used for patched
+    /// headers like config/<cpu>/<cpu>-opts.h that the upstream-sourced driver
+    /// must see in its patched form (resolved via the generated include dir).
+    gcc_generated_extra_headers: []const []const u8 = &.{},
+    /// Arguments to gcc/genmultilib (from the target's t-<cpu> fragment) to
+    /// generate multilib.h. Empty means a no-multilib target (genmultilib is
+    /// still invoked with empty args). Order matches GCC's genmultilib recipe.
+    multilib_genargs: []const []const u8 = &.{ "", "", "", "", "", "", "", "", "", "", "no" },
     /// GCC common_out_file override (default: "common/config/default-common.cc").
     /// Set to "" to skip (when providing the common file via gcc_extra_source_files).
     gcc_common_out_file: []const u8 = "common/config/default-common.cc",
