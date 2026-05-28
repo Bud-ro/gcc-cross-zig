@@ -111,6 +111,7 @@ pub fn buildToolchain(
         .files = &.{"lto-plugin.c"},
         .flags = &.{
             "-DHAVE_CONFIG_H",
+            b.fmt("-DBASE_VERSION=\"{s}\"", .{config.gcc_version}),
         },
     });
     lto_plugin.root_module.addIncludePath(gcc_root.path(b, "include"));
