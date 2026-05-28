@@ -106,17 +106,25 @@ pub fn addLibgcc(
         \\  for f in {9s}; do "$GCC" $F $INC -DFINE_GRAINED_LIBRARIES -DL$f -c "$LG/fp-bit.c" -o "$W/$f.o" 2>/dev/null || true; done
         \\  i=0; for s in {10s}; do "$GCC" $F $INC -c "$LG/$s" -o "$W/lib2add_$i.o" 2>/dev/null || true; i=$((i+1)); done
         \\  "$AR" rcs "$VDIR/libgcc.a" "$W"/*.o
-        \\  LIST=$("$AR" t "$VDIR/libgcc.a"); N=$(printf '%s\n' "$LIST" | grep -c .); rm -rf "$W"
-        \\  # crtbegin/crtend are best-effort (RX hits an assembler .size quirk;
-        \\  # only needed for C++ static ctors / exception frames).
-        \\  "$GCC" $F $INC -g0 -DCRT_BEGIN -c "$LG/crtstuff.c" -o "$VDIR/crtbegin.o" 2>/dev/null || true
-        \\  "$GCC" $F $INC -g0 -DCRT_END -c "$LG/crtstuff.c" -o "$VDIR/crtend.o" 2>/dev/null || true
+        \\  LIST=$("$AR" t "$VDIR/libgcc.a"); N=$(printf '%s\n' "$LIST" | grep -c .)
+        \\  # crtbegin/crtend use GCC's CRTSTUFF_CFLAGS (libgcc/Makefile.in), NOT
+        \\  # the libgcc2 flags: -finhibit-size-directive suppresses the .size
+        \\  # directives that otherwise span .init/.fini in the static init/fini
+        \\  # wrappers (GAS cannot fold .-sym across sections on RX); -fno-exceptions
+        \\  # / -fno-inline / -fno-toplevel-reorder etc. match the upstream recipe.
+        \\  # $W (with libgcc_tm.h) must still exist here, so remove it afterwards.
+        \\  CRTF="-O2 -DIN_GCC -g0 -finhibit-size-directive -fno-inline -fno-exceptions -fno-zero-initialized-in-bss -fno-toplevel-reorder -fno-tree-vectorize -fbuilding-libgcc -fno-stack-protector -Dinhibit_libc $MFLAGS"
+        \\  "$GCC" $CRTF $INC -DCRT_BEGIN -c "$LG/crtstuff.c" -o "$VDIR/crtbegin.o" || echo "WARNING: crtbegin.o [$MDIR] failed"
+        \\  "$GCC" $CRTF $INC -DCRT_END -c "$LG/crtstuff.c" -o "$VDIR/crtend.o" || echo "WARNING: crtend.o [$MDIR] failed"
+        \\  rm -rf "$W"
         \\  echo "libgcc.a [$MDIR]: $N objects"
         \\  [ "$N" -ge 40 ] || {{ echo "ERROR: libgcc.a [$MDIR] only $N objects -- build broken"; exit 1; }}
-        \\  # Canonical libgcc2.c routines (mode-independent: every target builds
-        \\  # them). Their absence means libgcc2.c compiles failed wholesale even
-        \\  # though the object floor was met (e.g. only fp-bit succeeded).
-        \\  for must in _muldi3.o _divdi3.o _clzsi2.o; do
+        \\  # Canonical libgcc2.c routines: 64-bit multiply/divide. These are
+        \\  # mode-independent and not in any target's LIB2FUNCS_EXCLUDE, so every
+        \\  # target builds them. Their absence means libgcc2.c compiles failed
+        \\  # wholesale even though the object floor was met (e.g. only fp-bit
+        \\  # succeeded). (_clzsi2 is NOT safe here: RL78 excludes it.)
+        \\  for must in _muldi3.o _divdi3.o; do
         \\    printf '%s\n' "$LIST" | grep -qx "$must" || {{ echo "ERROR: libgcc.a [$MDIR] missing $must -- libgcc2.c build broken"; exit 1; }}
         \\  done
         \\}}
