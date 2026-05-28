@@ -106,13 +106,19 @@ pub fn addLibgcc(
         \\  for f in {9s}; do "$GCC" $F $INC -DFINE_GRAINED_LIBRARIES -DL$f -c "$LG/fp-bit.c" -o "$W/$f.o" 2>/dev/null || true; done
         \\  i=0; for s in {10s}; do "$GCC" $F $INC -c "$LG/$s" -o "$W/lib2add_$i.o" 2>/dev/null || true; i=$((i+1)); done
         \\  "$AR" rcs "$VDIR/libgcc.a" "$W"/*.o
-        \\  N=$("$AR" t "$VDIR/libgcc.a" | wc -l); rm -rf "$W"
+        \\  LIST=$("$AR" t "$VDIR/libgcc.a"); N=$(printf '%s\n' "$LIST" | grep -c .); rm -rf "$W"
         \\  # crtbegin/crtend are best-effort (RX hits an assembler .size quirk;
         \\  # only needed for C++ static ctors / exception frames).
         \\  "$GCC" $F $INC -g0 -DCRT_BEGIN -c "$LG/crtstuff.c" -o "$VDIR/crtbegin.o" 2>/dev/null || true
         \\  "$GCC" $F $INC -g0 -DCRT_END -c "$LG/crtstuff.c" -o "$VDIR/crtend.o" 2>/dev/null || true
         \\  echo "libgcc.a [$MDIR]: $N objects"
         \\  [ "$N" -ge 40 ] || {{ echo "ERROR: libgcc.a [$MDIR] only $N objects -- build broken"; exit 1; }}
+        \\  # Canonical libgcc2.c routines (mode-independent: every target builds
+        \\  # them). Their absence means libgcc2.c compiles failed wholesale even
+        \\  # though the object floor was met (e.g. only fp-bit succeeded).
+        \\  for must in _muldi3.o _divdi3.o _clzsi2.o; do
+        \\    printf '%s\n' "$LIST" | grep -qx "$must" || {{ echo "ERROR: libgcc.a [$MDIR] missing $must -- libgcc2.c build broken"; exit 1; }}
+        \\  done
         \\}}
         \\
         \\build_variant "." ""
