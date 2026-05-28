@@ -55,6 +55,42 @@ pub fn buildToolchain(
     _ = gcc_cc1.addCc1(b, gcc_src, host_target, optimize, iberty, config);
     _ = gcc_cc1.addGccDriver(b, gcc_src, host_target, optimize, iberty, config);
 
+    // Build LTO plugin (shared library loaded by the linker)
+    const gcc_root = if (config.gcc_source_root_override) |ovr| ovr else gcc_src.path(".");
+    const lto_plugin = b.addLibrary(.{
+        .linkage = .dynamic,
+        .name = "lto_plugin",
+        .root_module = b.createModule(.{
+            .target = host_target,
+            .optimize = optimize,
+            .link_libc = true,
+        }),
+    });
+    lto_plugin.root_module.addCSourceFiles(.{
+        .root = gcc_root.path(b, "lto-plugin"),
+        .files = &.{"lto-plugin.c"},
+        .flags = &.{
+            "-DHAVE_CONFIG_H",
+            b.fmt("-DLTO_WRAPPER=\"lto-wrapper\"", .{}),
+        },
+    });
+    lto_plugin.root_module.addIncludePath(gcc_root.path(b, "include"));
+    lto_plugin.root_module.addIncludePath(binutils_root.path(b, "include"));
+    // Install to libexec/gcc/<target>/<version>/
+    const lto_install = b.addInstallArtifact(lto_plugin, .{
+        .dest_dir = .{ .override = .{
+            .custom = b.fmt("libexec/gcc/{s}/{s}", .{ config.target_canonical, config.gcc_version }),
+        } },
+    });
+    b.getInstallStep().dependOn(&lto_install.step);
+    // Also install to lib/gcc/<target>/<version>/ (some drivers look here)
+    const lto_install2 = b.addInstallArtifact(lto_plugin, .{
+        .dest_dir = .{ .override = .{
+            .custom = b.fmt("lib/gcc/{s}/{s}", .{ config.target_canonical, config.gcc_version }),
+        } },
+    });
+    b.getInstallStep().dependOn(&lto_install2.step);
+
     // Install tooldir layout: <target_canonical>/bin/{as,ld,ar}
     // The GCC driver searches for assembler/linker here via TOOLDIR_BASE_PREFIX.
     const tooldir = b.fmt("{s}/bin", .{config.target_canonical});
