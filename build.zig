@@ -15,6 +15,8 @@ pub const gen_tools = @import("gen_tools.zig");
 pub const libgcc = @import("libgcc.zig");
 pub const zlib = @import("zlib.zig");
 pub const gmp = @import("gmp.zig");
+pub const mpfr = @import("mpfr.zig");
+pub const mpc = @import("mpc.zig");
 
 pub const CrossConfig = cross_config.CrossConfig;
 pub const Libs = cross_config.Libs;
@@ -49,6 +51,31 @@ pub fn buildToolchain(
     if (gmp_lib) |g| {
         const step = b.step("gmp", "Build libgmp.a from source (standalone)");
         step.dependOn(&b.addInstallArtifact(g, .{}).step);
+    }
+
+    // MPFR depends on GMP; built only when both sources are supplied.
+    const mpfr_lib: ?*std.Build.Step.Compile = if (config.mpfr_src) |dep|
+        if (gmp_lib) |g| mpfr.addMpfr(b, dep.path("."), g, host_target, optimize) else null
+    else
+        null;
+    // Standalone build of libmpfr.a for quick iteration: `zig build mpfr`.
+    if (mpfr_lib) |m| {
+        const step = b.step("mpfr", "Build libmpfr.a from source (standalone)");
+        step.dependOn(&b.addInstallArtifact(m, .{}).step);
+    }
+
+    // MPC depends on GMP + MPFR; built only when all three sources are present.
+    const mpc_lib: ?*std.Build.Step.Compile = if (config.mpc_src) |dep|
+        if (gmp_lib != null and mpfr_lib != null)
+            mpc.addMpc(b, dep.path("."), gmp_lib.?, mpfr_lib.?, host_target, optimize)
+        else
+            null
+    else
+        null;
+    // Standalone build of libmpc.a for quick iteration: `zig build mpc`.
+    if (mpc_lib) |m| {
+        const step = b.step("mpc", "Build libmpc.a from source (standalone)");
+        step.dependOn(&b.addInstallArtifact(m, .{}).step);
     }
 
     // Build libraries
