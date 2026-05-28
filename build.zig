@@ -126,7 +126,7 @@ pub fn buildToolchain(
     }
 
     // Build GCC cc1 and driver
-    const support_libs = cross_config.SupportLibs{ .zlib = zlib_lib, .gmp = gmp_lib };
+    const support_libs = cross_config.SupportLibs{ .zlib = zlib_lib, .gmp = gmp_lib, .mpfr = mpfr_lib, .mpc = mpc_lib };
     _ = gcc_cc1.addCc1(b, gcc_src, host_target, optimize, iberty, config, gen_dir, gt_dir, support_libs);
     _ = gcc_cc1.addGccDriver(b, gcc_src, host_target, optimize, iberty, config, gen_dir);
 
