@@ -12,12 +12,13 @@ pub fn addGas(
     libs: Libs,
     config: CrossConfig,
 ) *std.Build.Step.Compile {
-    // gas/config.in has these #undef entries (binutils 2.42).
-    // Values come from the reference cross-build config.h.
+    // gas/config.h values (works with both binutils 2.42 and 2.44)
     const gas_config_header = b.addConfigHeader(.{
-        .style = .{ .autoconf_undef = binutils_root.path(b, "gas/config.in") },
+        .style = .blank,
+        .include_path = "config.h",
     }, .{
         .AC_APPLE_UNIVERSAL_BUILD = null,
+        .HAVE_DECL_ASPRINTF = true,
         .AIX_WEAK_SUPPORT = null,
         .BROKEN_ASSERT = null,
         .CROSS_COMPILE = true,

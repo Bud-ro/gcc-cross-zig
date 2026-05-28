@@ -12,10 +12,12 @@ pub fn addLd(
     libs: Libs,
     config: CrossConfig,
 ) *std.Build.Step.Compile {
-    // ld/config.in keys (binutils 2.42)
+    // ld/config.h values (works with both binutils 2.42 and 2.44)
     const ld_config_header = b.addConfigHeader(.{
-        .style = .{ .autoconf_undef = binutils_root.path(b, "ld/config.in") },
+        .style = .blank,
+        .include_path = "config.h",
     }, .{
+        .HAVE_DECL_ASPRINTF = true,
         .DEFAULT_COMPRESSED_DEBUG_ALGORITHM = .COMPRESS_DEBUG_GABI_ZLIB,
         .DEFAULT_EMIT_GNU_HASH = @as(i64, 0),
         .DEFAULT_EMIT_SYSV_HASH = @as(i64, 1),
