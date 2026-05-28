@@ -14,6 +14,7 @@ pub const gcc_cc1 = @import("gcc_cc1.zig");
 pub const gen_tools = @import("gen_tools.zig");
 pub const libgcc = @import("libgcc.zig");
 pub const zlib = @import("zlib.zig");
+pub const gmp = @import("gmp.zig");
 
 pub const CrossConfig = cross_config.CrossConfig;
 pub const Libs = cross_config.Libs;
@@ -39,6 +40,16 @@ pub fn buildToolchain(
         zlib.addZlib(b, dep.path("."), host_target, optimize)
     else
         null;
+
+    const gmp_lib: ?*std.Build.Step.Compile = if (config.gmp_src) |dep|
+        gmp.addGmp(b, dep.path("."), host_target, optimize)
+    else
+        null;
+    // Standalone build of libgmp.a for quick iteration: `zig build gmp`.
+    if (gmp_lib) |g| {
+        const step = b.step("gmp", "Build libgmp.a from source (standalone)");
+        step.dependOn(&b.addInstallArtifact(g, .{}).step);
+    }
 
     // Build libraries
     const iberty = binutils_libs.addLibiberty(b, binutils_root, host_target, optimize);
@@ -88,7 +99,7 @@ pub fn buildToolchain(
     }
 
     // Build GCC cc1 and driver
-    const support_libs = cross_config.SupportLibs{ .zlib = zlib_lib };
+    const support_libs = cross_config.SupportLibs{ .zlib = zlib_lib, .gmp = gmp_lib };
     _ = gcc_cc1.addCc1(b, gcc_src, host_target, optimize, iberty, config, gen_dir, gt_dir, support_libs);
     _ = gcc_cc1.addGccDriver(b, gcc_src, host_target, optimize, iberty, config, gen_dir);
 
