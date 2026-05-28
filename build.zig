@@ -57,6 +57,37 @@ pub fn buildToolchain(
 
     // Build LTO plugin (shared library loaded by the linker)
     const gcc_root = if (config.gcc_source_root_override) |ovr| ovr else gcc_src.path(".");
+    const lto_config = b.addConfigHeader(.{
+        .style = .{ .autoconf_undef = gcc_root.path(b, "lto-plugin/config.h.in") },
+    }, .{
+        .HAVE_DLFCN_H = true,
+        .HAVE_INTTYPES_H = true,
+        .HAVE_MEMORY_H = true,
+        .HAVE_STDINT_H = true,
+        .HAVE_STDLIB_H = true,
+        .HAVE_STRINGS_H = true,
+        .HAVE_STRING_H = true,
+        .HAVE_SYS_STAT_H = true,
+        .HAVE_SYS_TYPES_H = true,
+        .HAVE_SYS_WAIT_H = true,
+        .HAVE_UNISTD_H = true,
+        .HAVE_PTHREAD_LOCKING = true,
+        .LT_OBJDIR = ".libs/",
+        .PACKAGE = "lto-plugin",
+        .PACKAGE_BUGREPORT = "",
+        .PACKAGE_NAME = "lto-plugin",
+        .PACKAGE_STRING = "lto-plugin 0.1",
+        .PACKAGE_TARNAME = "lto-plugin",
+        .PACKAGE_URL = "",
+        .PACKAGE_VERSION = "0.1",
+        .STDC_HEADERS = true,
+        .VERSION = "0.1",
+        ._ALL_SOURCE = true,
+        ._GNU_SOURCE = true,
+        ._POSIX_PTHREAD_SEMANTICS = true,
+        ._TANDEM_SOURCE = true,
+        .__EXTENSIONS__ = true,
+    });
     const lto_plugin = b.addLibrary(.{
         .linkage = .dynamic,
         .name = "lto_plugin",
@@ -66,12 +97,12 @@ pub fn buildToolchain(
             .link_libc = true,
         }),
     });
+    lto_plugin.root_module.addConfigHeader(lto_config);
     lto_plugin.root_module.addCSourceFiles(.{
         .root = gcc_root.path(b, "lto-plugin"),
         .files = &.{"lto-plugin.c"},
         .flags = &.{
             "-DHAVE_CONFIG_H",
-            b.fmt("-DLTO_WRAPPER=\"lto-wrapper\"", .{}),
         },
     });
     lto_plugin.root_module.addIncludePath(gcc_root.path(b, "include"));
