@@ -235,6 +235,7 @@ fn configH(b: *std.Build, host_target: std.Build.ResolvedTarget) []const u8 {
         \\#define HAVE_DOUBLE_IEEE_LITTLE_ENDIAN 1
         \\#define HAVE_LIMB_LITTLE_ENDIAN 1
         \\#define HAVE_ALLOCA 1
+        \\#define HAVE_RAISE 1
         \\#define HAVE_STDINT_H 1
         \\#define HAVE_STDLIB_H 1
         \\#define HAVE_STRING_H 1
