@@ -581,7 +581,6 @@ pub fn addLibbfd(
             "tekhex.c",
             "verilog.c",
             "archive64.c",
-            "bfdwin.c",
         },
     });
 
