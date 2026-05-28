@@ -82,9 +82,9 @@ pub fn buildToolchain(
     // via -print-file-name=include.
     const include_dir = b.fmt("{s}/include", .{lib_gcc_dir});
     const ginclude_headers = [_][]const u8{
-        "stdarg.h",    "stddef.h",    "stdbool.h",   "stdint-gcc.h",
-        "stdatomic.h", "stdalign.h",  "stdnoreturn.h", "float.h",
-        "iso646.h",    "stdfix.h",    "varargs.h",   "stdckdint.h",
+        "stdarg.h",    "stddef.h",      "stdbool.h",     "stdint-gcc.h",
+        "stdatomic.h", "stdalign.h",    "stdnoreturn.h", "float.h",
+        "iso646.h",    "stdfix.h",      "varargs.h",     "stdckdint.h",
         "tgmath.h",    "stdint-wrap.h",
     };
     for (ginclude_headers) |hdr| {

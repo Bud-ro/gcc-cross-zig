@@ -378,7 +378,7 @@ pub fn addLibbfd(
     config: CrossConfig,
 ) BfdResult {
     const libbfd_config_header = b.addConfigHeader(.{
-        .style = .{ .autoconf_undef = binutils_root.path(b,"bfd/config.in") },
+        .style = .{ .autoconf_undef = binutils_root.path(b, "bfd/config.in") },
     }, .{
         .AC_APPLE_UNIVERSAL_BUILD = null,
         .CORE_HEADER = @as(?[]const u8, null),
@@ -496,7 +496,7 @@ pub fn addLibbfd(
     });
 
     const bfd_header = b.addConfigHeader(.{
-        .style = .{ .autoconf_at = binutils_root.path(b,"bfd/bfd-in2.h") },
+        .style = .{ .autoconf_at = binutils_root.path(b, "bfd/bfd-in2.h") },
         .include_path = "bfd.h",
     }, .{
         .supports_plugins = @as(i64, 0),
@@ -507,7 +507,7 @@ pub fn addLibbfd(
     });
 
     const bfdver_header = b.addConfigHeader(.{
-        .style = .{ .autoconf_at = binutils_root.path(b,"bfd/version.h") },
+        .style = .{ .autoconf_at = binutils_root.path(b, "bfd/version.h") },
         .include_path = "bfdver.h",
     }, .{
         .bfd_version = @as(i64, 242000000),
@@ -526,8 +526,8 @@ pub fn addLibbfd(
         }),
     });
 
-    const elf32_target_h = runFindReplace(b, find_replace_exe, binutils_root.path(b,"bfd/elfxx-target.h"), "elf32-target.h", "NN", "32");
-    const elf64_target_h = runFindReplace(b, find_replace_exe, binutils_root.path(b,"bfd/elfxx-target.h"), "elf64-target.h", "NN", "64");
+    const elf32_target_h = runFindReplace(b, find_replace_exe, binutils_root.path(b, "bfd/elfxx-target.h"), "elf32-target.h", "NN", "32");
+    const elf64_target_h = runFindReplace(b, find_replace_exe, binutils_root.path(b, "bfd/elfxx-target.h"), "elf64-target.h", "NN", "64");
 
     const bfd = b.addLibrary(.{
         .linkage = .static,
@@ -543,8 +543,8 @@ pub fn addLibbfd(
     bfd.root_module.addCMacro("DEBUGDIR", b.fmt("\"{s}\"", .{b.pathJoin(&.{ b.install_prefix, "lib", "debug" })}));
     bfd.root_module.linkLibrary(iberty);
     bfd.root_module.linkLibrary(libsframe);
-    bfd.root_module.addIncludePath(binutils_root.path(b,"bfd"));
-    bfd.root_module.addIncludePath(binutils_root.path(b,"include"));
+    bfd.root_module.addIncludePath(binutils_root.path(b, "bfd"));
+    bfd.root_module.addIncludePath(binutils_root.path(b, "include"));
     bfd.root_module.addConfigHeader(bfd_header);
     bfd.root_module.addConfigHeader(bfdver_header);
     bfd.root_module.addIncludePath(config.include_dir); // targmatch.h
@@ -553,7 +553,7 @@ pub fn addLibbfd(
 
     // Core BFD sources
     bfd.root_module.addCSourceFiles(.{
-        .root = binutils_root.path(b,"bfd"),
+        .root = binutils_root.path(b, "bfd"),
         .files = &.{
             "archive.c",
             "bfd.c",
@@ -587,11 +587,11 @@ pub fn addLibbfd(
 
     // Target ELF vector sources
     bfd.root_module.addCSourceFiles(.{
-        .root = binutils_root.path(b,"bfd"),
+        .root = binutils_root.path(b, "bfd"),
         .files = config.bfd_elf_target_srcs,
     });
     bfd.root_module.addCSourceFiles(.{
-        .root = binutils_root.path(b,"bfd"),
+        .root = binutils_root.path(b, "bfd"),
         .files = &.{
             "elf32.c",
             // ELF common
@@ -608,7 +608,7 @@ pub fn addLibbfd(
 
     // Generic ELF vectors (elf32_le_vec, elf32_be_vec) and elf64 support
     bfd.root_module.addCSourceFiles(.{
-        .root = binutils_root.path(b,"bfd"),
+        .root = binutils_root.path(b, "bfd"),
         .files = &.{
             "elf32-gen.c",
             "elf64.c",
@@ -618,12 +618,12 @@ pub fn addLibbfd(
 
     // Architecture file
     bfd.root_module.addCSourceFile(.{
-        .file = binutils_root.path(b,b.fmt("bfd/{s}", .{config.bfd_cpu_arch_src})),
+        .file = binutils_root.path(b, b.fmt("bfd/{s}", .{config.bfd_cpu_arch_src})),
     });
     // Extra architecture files (e.g. cpu-v850_rh850.c for v850)
     for (config.bfd_extra_cpu_arch_srcs) |src| {
         bfd.root_module.addCSourceFile(.{
-            .file = binutils_root.path(b,b.fmt("bfd/{s}", .{src})),
+            .file = binutils_root.path(b, b.fmt("bfd/{s}", .{src})),
         });
     }
 
@@ -633,7 +633,7 @@ pub fn addLibbfd(
     }
 
     bfd.root_module.addCSourceFiles(.{
-        .root = binutils_root.path(b,"bfd"),
+        .root = binutils_root.path(b, "bfd"),
         .files = &.{
             "targets.c",
             "archures.c",
@@ -665,7 +665,7 @@ pub fn addLibopcodes(
     config: CrossConfig,
 ) *std.Build.Step.Compile {
     const config_header = b.addConfigHeader(.{
-        .style = .{ .autoconf_undef = binutils_root.path(b,"opcodes/config.in") },
+        .style = .{ .autoconf_undef = binutils_root.path(b, "opcodes/config.in") },
     }, .{
         .ENABLE_CHECKING = null,
         .ENABLE_NLS = null,
@@ -719,20 +719,20 @@ pub fn addLibopcodes(
     });
     libopcodes.root_module.addConfigHeader(config_header);
     libopcodes.root_module.addCMacro("HAVE_CONFIG_H", "1");
-    libopcodes.root_module.addIncludePath(binutils_root.path(b,"opcodes"));
-    libopcodes.root_module.addIncludePath(binutils_root.path(b,"bfd"));
-    libopcodes.root_module.addIncludePath(binutils_root.path(b,"include"));
+    libopcodes.root_module.addIncludePath(binutils_root.path(b, "opcodes"));
+    libopcodes.root_module.addIncludePath(binutils_root.path(b, "bfd"));
+    libopcodes.root_module.addIncludePath(binutils_root.path(b, "include"));
     libopcodes.root_module.addConfigHeader(bfd_header);
 
     // Common opcodes sources
     libopcodes.root_module.addCSourceFiles(.{
-        .root = binutils_root.path(b,"opcodes"),
+        .root = binutils_root.path(b, "opcodes"),
         .files = &.{ "dis-buf.c", "dis-init.c" },
     });
 
     // Target-specific opcodes sources
     libopcodes.root_module.addCSourceFiles(.{
-        .root = binutils_root.path(b,"opcodes"),
+        .root = binutils_root.path(b, "opcodes"),
         .files = config.opcodes_target_srcs,
     });
 
@@ -743,7 +743,7 @@ pub fn addLibopcodes(
         arch_flags[1 + i] = flag;
     }
     libopcodes.root_module.addCSourceFiles(.{
-        .root = binutils_root.path(b,"opcodes"),
+        .root = binutils_root.path(b, "opcodes"),
         .files = &.{"disassemble.c"},
         .flags = arch_flags,
     });

@@ -14,7 +14,7 @@ pub fn addLd(
 ) *std.Build.Step.Compile {
     // ld/config.in keys (binutils 2.42)
     const ld_config_header = b.addConfigHeader(.{
-        .style = .{ .autoconf_undef = binutils_root.path(b,"ld/config.in") },
+        .style = .{ .autoconf_undef = binutils_root.path(b, "ld/config.in") },
     }, .{
         .DEFAULT_COMPRESSED_DEBUG_ALGORITHM = .COMPRESS_DEBUG_GABI_ZLIB,
         .DEFAULT_EMIT_GNU_HASH = @as(i64, 0),
@@ -133,15 +133,15 @@ pub fn addLd(
     ld.root_module.linkLibrary(libs.libsframe);
     ld.root_module.linkSystemLibrary("z", .{});
 
-    ld.root_module.addIncludePath(binutils_root.path(b,"ld"));
-    ld.root_module.addIncludePath(binutils_root.path(b,"include"));
-    ld.root_module.addIncludePath(binutils_root.path(b,"bfd"));
+    ld.root_module.addIncludePath(binutils_root.path(b, "ld"));
+    ld.root_module.addIncludePath(binutils_root.path(b, "include"));
+    ld.root_module.addIncludePath(binutils_root.path(b, "bfd"));
     ld.root_module.addIncludePath(config.include_dir); // ldemul-list.h
     ld.root_module.addIncludePath(config.vendor_ld_dir); // emulation file include path
 
     // Core ld sources (pre-generated ldgram.c and ldlex-wrapper.c ship in tarball)
     ld.root_module.addCSourceFiles(.{
-        .root = binutils_root.path(b,"ld"),
+        .root = binutils_root.path(b, "ld"),
         .files = &.{
             "ldmain.c",
             "ldmisc.c",

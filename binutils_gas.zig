@@ -15,7 +15,7 @@ pub fn addGas(
     // gas/config.in has these #undef entries (binutils 2.42).
     // Values come from the reference cross-build config.h.
     const gas_config_header = b.addConfigHeader(.{
-        .style = .{ .autoconf_undef = binutils_root.path(b,"gas/config.in") },
+        .style = .{ .autoconf_undef = binutils_root.path(b, "gas/config.in") },
     }, .{
         .AC_APPLE_UNIVERSAL_BUILD = null,
         .AIX_WEAK_SUPPORT = null,
@@ -148,17 +148,17 @@ pub fn addGas(
     gas.root_module.linkLibrary(libs.libsframe);
     gas.root_module.linkSystemLibrary("z", .{});
 
-    gas.root_module.addIncludePath(binutils_root.path(b,"gas"));
-    gas.root_module.addIncludePath(binutils_root.path(b,"gas/config"));
-    gas.root_module.addIncludePath(binutils_root.path(b,"include"));
-    gas.root_module.addIncludePath(binutils_root.path(b,"bfd"));
-    gas.root_module.addIncludePath(binutils_root.path(b,"opcodes"));
-    gas.root_module.addIncludePath(binutils_root.path(b,"")); // source root for bfd/elf-bfd.h
+    gas.root_module.addIncludePath(binutils_root.path(b, "gas"));
+    gas.root_module.addIncludePath(binutils_root.path(b, "gas/config"));
+    gas.root_module.addIncludePath(binutils_root.path(b, "include"));
+    gas.root_module.addIncludePath(binutils_root.path(b, "bfd"));
+    gas.root_module.addIncludePath(binutils_root.path(b, "opcodes"));
+    gas.root_module.addIncludePath(binutils_root.path(b, "")); // source root for bfd/elf-bfd.h
     gas.root_module.addIncludePath(config.include_dir); // generated headers
 
     // Core gas sources
     gas.root_module.addCSourceFiles(.{
-        .root = binutils_root.path(b,"gas"),
+        .root = binutils_root.path(b, "gas"),
         .files = &.{
             "as.c",
             "app.c",
@@ -201,7 +201,7 @@ pub fn addGas(
 
     // Target-specific sources
     gas.root_module.addCSourceFiles(.{
-        .root = binutils_root.path(b,"gas/config"),
+        .root = binutils_root.path(b, "gas/config"),
         .files = config.gas_target_srcs,
     });
 

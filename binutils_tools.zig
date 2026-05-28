@@ -14,7 +14,7 @@ pub fn addTools(
 ) *std.Build.Step.Compile {
     // binutils/config.in keys (binutils 2.42)
     const binutils_config_header = b.addConfigHeader(.{
-        .style = .{ .autoconf_undef = binutils_root.path(b,"binutils/config.in") },
+        .style = .{ .autoconf_undef = binutils_root.path(b, "binutils/config.in") },
     }, .{
         .DEFAULT_AR_DETERMINISTIC = @as(i64, 0),
         .DEFAULT_FOR_COLORED_DISASSEMBLY = @as(i64, 0),
@@ -212,21 +212,21 @@ pub fn addTools(
         exe.root_module.linkLibrary(libs.iberty);
         exe.root_module.linkSystemLibrary("z", .{});
 
-        exe.root_module.addIncludePath(binutils_root.path(b,"binutils"));
-        exe.root_module.addIncludePath(binutils_root.path(b,"include"));
-        exe.root_module.addIncludePath(binutils_root.path(b,"bfd"));
+        exe.root_module.addIncludePath(binutils_root.path(b, "binutils"));
+        exe.root_module.addIncludePath(binutils_root.path(b, "include"));
+        exe.root_module.addIncludePath(binutils_root.path(b, "bfd"));
         exe.root_module.addIncludePath(config.include_dir);
 
         // Tool-specific source files
         exe.root_module.addCSourceFiles(.{
-            .root = binutils_root.path(b,"binutils"),
+            .root = binutils_root.path(b, "binutils"),
             .files = tool_def.sources,
         });
 
         // Common utility files
         if (!tool_def.skip_common) {
             exe.root_module.addCSourceFiles(.{
-                .root = binutils_root.path(b,"binutils"),
+                .root = binutils_root.path(b, "binutils"),
                 .files = common_files,
             });
         }
