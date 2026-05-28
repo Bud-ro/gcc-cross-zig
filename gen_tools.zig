@@ -38,9 +38,9 @@ const gen_flags = [_][]const u8{
 /// Tier-B shared support sources (linked by most md-consuming generators).
 /// min-insn-modes.cc is generated, so it is added separately.
 const support_srcs = [_][]const u8{
-    "rtl.cc",      "read-rtl.cc",   "ggc-none.cc",  "vec.cc",
+    "rtl.cc",        "read-rtl.cc",  "ggc-none.cc",   "vec.cc",
     "gensupport.cc", "print-rtl.cc", "hash-table.cc", "sort.cc",
-    "read-md.cc",  "errors.cc",     "inchash.cc",
+    "read-md.cc",    "errors.cc",    "inchash.cc",
 };
 
 pub const NamedFile = struct { name: []const u8, file: std.Build.LazyPath };
@@ -66,7 +66,9 @@ const Ctx = struct {
     gcc_root: std.Build.LazyPath,
     gcc_dir: std.Build.LazyPath, // gcc_root/gcc
     bconfig_dir: std.Build.LazyPath,
-    host_target: std.Build.ResolvedTarget,
+    /// Generators run on the build machine, so every gen* exe/support lib is
+    /// compiled for this (native) target -- never the toolchain's host_target.
+    build_target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
     iberty: *std.Build.Step.Compile,
     config: CrossConfig,
@@ -111,7 +113,7 @@ fn standaloneTool(
     const exe = c.b.addExecutable(.{
         .name = name,
         .root_module = c.b.createModule(.{
-            .target = c.host_target,
+            .target = c.build_target,
             .optimize = c.optimize,
             .link_libc = true,
         }),
@@ -127,9 +129,9 @@ fn standaloneTool(
 
 /// Always-present .opt files (language fronts + common), in GCC's gather order.
 const fixed_opt_files = [_][]const u8{
-    "ada/gcc-interface/lang.opt", "d/lang.opt",  "fortran/lang.opt",
-    "go/lang.opt",                "lto/lang.opt", "m2/lang.opt",
-    "rust/lang.opt",              "c-family/c.opt", "common.opt",
+    "ada/gcc-interface/lang.opt", "d/lang.opt",            "fortran/lang.opt",
+    "go/lang.opt",                "lto/lang.opt",          "m2/lang.opt",
+    "rust/lang.opt",              "c-family/c.opt",        "common.opt",
     "params.opt",                 "analyzer/analyzer.opt",
 };
 
@@ -206,7 +208,8 @@ fn addGengtype(
     // gengtype writes its outputs to cwd, so run it inside a captured output dir.
     // The manifest's @GCCSRC@ token is rebased to the patched source root; the
     // bare names auto-host.h and options.h must exist in that cwd.
-    const run = c.b.addSystemCommand(&.{ "sh", "-c",
+    const run = c.b.addSystemCommand(&.{
+        "sh", "-c",
         \\set -e
         \\GG="$(realpath "$1")"; SRCDIR="$(realpath "$2")"; LISTIN="$3"; GCCSRC="$(realpath "$4")"; AUTOH="$5"; OPTS="$6"; OUT="$7"
         \\mkdir -p "$OUT"
@@ -216,7 +219,9 @@ fn addGengtype(
         \\cd "$OUT"
         \\"$GG" -S "$SRCDIR" -I gtyp-input.list -w gtype.state
         \\"$GG" -r gtype.state
-    , "_" });
+        ,
+        "_",
+    });
     run.addArtifactArg(gengtype); // $1
     run.addDirectoryArg(c.gcc_dir); // $2 srcdir
     run.addFileArg(list_in); // $3
@@ -244,7 +249,7 @@ fn runMd(c: Ctx, tool: *std.Build.Step.Compile, conditions: ?std.Build.LazyPath,
 pub fn addGenerated(
     b: *std.Build,
     gcc_root: std.Build.LazyPath,
-    host_target: std.Build.ResolvedTarget,
+    build_target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
     iberty: *std.Build.Step.Compile,
     libcpp: *std.Build.Step.Compile,
@@ -255,7 +260,7 @@ pub fn addGenerated(
         .gcc_root = gcc_root,
         .gcc_dir = gcc_root.path(b, "gcc"),
         .bconfig_dir = buildConfigDir(b),
-        .host_target = host_target,
+        .build_target = build_target,
         .optimize = optimize,
         .iberty = iberty,
         .config = config,
@@ -312,7 +317,7 @@ pub fn addGenerated(
     const sup = b.addLibrary(.{
         .linkage = .static,
         .name = "gensupport",
-        .root_module = b.createModule(.{ .target = host_target, .optimize = optimize, .link_libc = true }),
+        .root_module = b.createModule(.{ .target = build_target, .optimize = optimize, .link_libc = true }),
     });
     sup.root_module.link_libcpp = true;
     sup.root_module.addCSourceFiles(.{ .root = c.gcc_dir, .files = &support_srcs, .flags = &gen_flags });
@@ -325,7 +330,7 @@ pub fn addGenerated(
         fn make(cc: Ctx, support: *std.Build.Step.Compile, incs: []const std.Build.LazyPath, name: []const u8, src: []const u8) *std.Build.Step.Compile {
             const exe = cc.b.addExecutable(.{
                 .name = name,
-                .root_module = cc.b.createModule(.{ .target = cc.host_target, .optimize = cc.optimize, .link_libc = true }),
+                .root_module = cc.b.createModule(.{ .target = cc.build_target, .optimize = cc.optimize, .link_libc = true }),
             });
             exe.root_module.link_libcpp = true;
             exe.root_module.addCSourceFiles(.{ .root = cc.gcc_dir, .files = &.{src}, .flags = &gen_flags });
@@ -487,7 +492,7 @@ pub fn addGenerated(
     // genmatch links libcpp + a few support objects (not the full support lib).
     const genmatch = b.addExecutable(.{
         .name = "genmatch",
-        .root_module = b.createModule(.{ .target = host_target, .optimize = optimize, .link_libc = true }),
+        .root_module = b.createModule(.{ .target = build_target, .optimize = optimize, .link_libc = true }),
     });
     genmatch.root_module.link_libcpp = true;
     genmatch.root_module.addCSourceFiles(.{ .root = c.gcc_dir, .files = &.{ "genmatch.cc", "errors.cc", "vec.cc", "hash-table.cc", "sort.cc" }, .flags = &gen_flags });
@@ -500,7 +505,8 @@ pub fn addGenerated(
     // genmatch resolves match.pd's `#include "cfn-operators.pd"` via getpwd(),
     // so run it in an output dir that holds cfn-operators.pd.
     const match_pd = c.gcc_dir.path(b, "match.pd");
-    const mrun = b.addSystemCommand(&.{ "sh", "-c",
+    const mrun = b.addSystemCommand(&.{
+        "sh", "-c",
         \\set -e
         \\GM="$(realpath "$1")"; CFN="$2"; MPD="$(realpath "$3")"; OUT="$4"
         \\mkdir -p "$OUT"; cp "$CFN" "$OUT/cfn-operators.pd"; cd "$OUT"
@@ -509,7 +515,9 @@ pub fn addGenerated(
         \\  args=""; i=1; while [ $i -le 10 ]; do args="$args $v-match-$i.cc"; i=$((i+1)); done
         \\  "$GM" --$v --header=$v-match-auto.h --include=$v-match-auto.h "$MPD" $args
         \\done
-    , "_" });
+        ,
+        "_",
+    });
     mrun.addArtifactArg(genmatch);
     mrun.addFileArg(cfn_operators_pd);
     mrun.addFileArg(match_pd);
@@ -629,13 +637,16 @@ pub fn addVerify(
         // machine path). Canonicalize "<dirs>/gcc/" -> "gcc/" and strip the
         // directory from the "gen*" program name so only semantic content is
         // compared.
-        const diff = b.addSystemCommand(&.{ "sh", "-c",
+        const diff = b.addSystemCommand(&.{
+            "sh", "-c",
             \\set -e
             \\A=$(mktemp); B=$(mktemp)
             \\sed -E -e 's#[^ "]*/(gcc/)#\1#g' -e 's#[^ ]*/(gen[a-z-]+'\'')#\1#g' "$1" > "$A"
             \\sed -E -e 's#[^ "]*/(gcc/)#\1#g' -e 's#[^ ]*/(gen[a-z-]+'\'')#\1#g' "$2" > "$B"
             \\diff -u "$A" "$B"; rc=$?; rm -f "$A" "$B"; exit $rc
-        , "_" });
+            ,
+            "_",
+        });
         diff.addFileArg(oracle_dir.path(b, nf.name));
         diff.addFileArg(nf.file);
         verify_step.dependOn(&diff.step);

@@ -81,7 +81,7 @@ pub fn buildToolchain(
     // Build libraries
     const iberty = binutils_libs.addLibiberty(b, binutils_root, host_target, optimize);
     const libsframe = binutils_libs.addLibsframe(b, binutils_root, host_target, optimize, config);
-    const bfd_result = binutils_libs.addLibbfd(b, binutils_root, host_target, optimize, iberty, libsframe, config);
+    const bfd_result = binutils_libs.addLibbfd(b, binutils_root, host_target, optimize, iberty, libsframe, zlib_lib, config);
     const libopcodes = binutils_libs.addLibopcodes(b, binutils_root, host_target, optimize, bfd_result.bfd_header, config);
 
     const libs = Libs{
@@ -109,8 +109,15 @@ pub fn buildToolchain(
     var gen_dir: ?std.Build.LazyPath = null;
     var gt_dir: ?std.Build.LazyPath = null;
     if (config.gtyp_input_list != null) {
-        const host_libcpp = gcc_cc1.addLibcpp(b, gcc_src, host_target, optimize, config);
-        const generated = gen_tools.addGenerated(b, gcc_root, host_target, optimize, iberty, host_libcpp, config);
+        // Generators (gen*, genmatch) run on the build machine, not the
+        // toolchain's host. For a native build they coincide; for a Canadian
+        // cross (e.g. host=Windows) they must be compiled for the native build
+        // target so they can execute during the build. libiberty/libcpp that
+        // the generators link must likewise be native.
+        const build_target = b.resolveTargetQuery(.{});
+        const gen_iberty = binutils_libs.addLibiberty(b, binutils_root, build_target, optimize);
+        const gen_libcpp = gcc_cc1.addLibcpp(b, gcc_src, build_target, optimize, config);
+        const generated = gen_tools.addGenerated(b, gcc_root, build_target, optimize, gen_iberty, gen_libcpp, config);
         gen_dir = generated.dir;
         gt_dir = generated.gt_dir;
         // When a vendored dir is still present, register a regression check.
@@ -128,13 +135,13 @@ pub fn buildToolchain(
     // Build GCC cc1 and driver
     const support_libs = cross_config.SupportLibs{ .zlib = zlib_lib, .gmp = gmp_lib, .mpfr = mpfr_lib, .mpc = mpc_lib };
     _ = gcc_cc1.addCc1(b, gcc_src, host_target, optimize, iberty, config, gen_dir, gt_dir, support_libs);
-    _ = gcc_cc1.addGccDriver(b, gcc_src, host_target, optimize, iberty, config, gen_dir);
+    _ = gcc_cc1.addGccDriver(b, gcc_src, host_target, optimize, iberty, config, gen_dir, gmp_lib);
 
     // Build LTO plugin (shared library loaded by the linker)
     const lto_config = b.addConfigHeader(.{
         .style = .{ .autoconf_undef = gcc_root.path(b, "lto-plugin/config.h.in") },
     }, .{
-        .HAVE_DLFCN_H = true,
+        .HAVE_DLFCN_H = if (host_target.result.os.tag == .windows) null else true,
         .HAVE_INTTYPES_H = true,
         .HAVE_MEMORY_H = true,
         .HAVE_STDINT_H = true,
@@ -143,7 +150,7 @@ pub fn buildToolchain(
         .HAVE_STRING_H = true,
         .HAVE_SYS_STAT_H = true,
         .HAVE_SYS_TYPES_H = true,
-        .HAVE_SYS_WAIT_H = true,
+        .HAVE_SYS_WAIT_H = if (host_target.result.os.tag == .windows) null else true,
         .HAVE_UNISTD_H = true,
         .HAVE_PTHREAD_LOCKING = true,
         .LT_OBJDIR = ".libs/",
@@ -190,6 +197,11 @@ pub fn buildToolchain(
     });
     lto_plugin.root_module.addIncludePath(gcc_root.path(b, "include"));
     lto_plugin.root_module.addIncludePath(binutils_root.path(b, "include"));
+    // lto-plugin.c references libiberty (xmalloc, htab_*, pex_*, simple_object_*).
+    // On ELF a shared object may leave these undefined and resolve them from the
+    // host linker process at load time, but a Windows DLL must resolve every
+    // symbol at link time, so statically pull in libiberty.
+    lto_plugin.root_module.linkLibrary(iberty);
     // Install to libexec/gcc/<target>/<version>/
     const lto_install = b.addInstallArtifact(lto_plugin, .{
         .dest_dir = .{ .override = .{

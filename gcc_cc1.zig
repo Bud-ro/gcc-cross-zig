@@ -246,6 +246,22 @@ pub fn addCc1(
         "-Wno-format",
         "-Wno-nontrivial-memaccess",
         "-Wno-unknown-warning-option",
+        // poly-int coeffs[] is sized by NUM_POLY_INT_COEFFS (1 for RX); gcc's
+        // generic code statically indexes coeffs[1] behind runtime guards, which
+        // clang flags as a constant out-of-bounds access.
+        "-Wno-array-bounds",
+        // The Darwin clang toolchain promotes several warnings to default errors
+        // that are plain warnings for ELF/PE targets. gcc's (older) vendored
+        // source trips all of these; keep them warnings so the macOS host builds.
+        // (-Wno-unknown-warning-option above keeps these harmless on other hosts.)
+        "-Wno-error=deprecated-declarations",
+        "-Wno-error=inconsistent-missing-override",
+        "-Wno-error=tautological-compare",
+        "-Wno-error=varargs",
+        "-Wno-error=dangling-else",
+        "-Wno-error=shift-count-overflow",
+        "-Wno-error=format-nonliteral",
+        "-Wno-error=format-security",
         "-fno-exceptions",
         "-fno-rtti",
     };
@@ -268,6 +284,24 @@ pub fn addCc1(
             .flags = common_flags,
         });
     }
+
+    // host_hook_obj: the host-specific PCH/memory hooks. GCC picks these at
+    // configure time from config.host; we mirror that selection on the host OS.
+    // Darwin splits the host_hooks struct (arch-specific file) from its shared
+    // gt_pch helpers (host-darwin.cc), so it needs both.
+    const host_hook_objs: []const []const u8 = switch (target.result.os.tag) {
+        .windows => &.{"config/i386/host-mingw32.cc"},
+        .macos => switch (target.result.cpu.arch) {
+            .aarch64 => &.{ "config/aarch64/host-aarch64-darwin.cc", "config/host-darwin.cc" },
+            else => &.{ "config/i386/host-i386-darwin.cc", "config/host-darwin.cc" },
+        },
+        else => &.{"config/host-linux.cc"},
+    };
+    exe.root_module.addCSourceFiles(.{
+        .root = gcc_root.path(b, "gcc"),
+        .files = host_hook_objs,
+        .flags = common_flags,
+    });
 
     // -----------------------------------------------------------------
     // Generated files from our vendored directory
@@ -341,6 +375,10 @@ pub fn addCc1(
         "-Wno-format",
         "-Wno-nontrivial-memaccess",
         "-Wno-unknown-warning-option",
+        // poly-int coeffs[] is sized by NUM_POLY_INT_COEFFS (1 for RX); gcc's
+        // generic code statically indexes coeffs[1] behind runtime guards, which
+        // clang flags as a constant out-of-bounds access.
+        "-Wno-array-bounds",
         "-fno-exceptions",
         "-fno-rtti",
         "-DIN_GCC_FRONTEND",
@@ -444,6 +482,7 @@ pub fn addGccDriver(
     iberty: *std.Build.Step.Compile,
     config: CrossConfig,
     gen_dir: ?std.Build.LazyPath,
+    gmp: ?*std.Build.Step.Compile,
 ) *std.Build.Step.Compile {
     const libcpp = addLibcpp(b, gcc_src, target, optimize, config);
     const libcody = addLibcody(b, gcc_src, target, optimize, config);
@@ -461,6 +500,10 @@ pub fn addGccDriver(
     exe.root_module.linkLibrary(iberty);
     exe.root_module.linkLibrary(libcpp);
     exe.root_module.linkLibrary(libcody);
+    // system.h #include <gmp.h>. On a native build zig cc finds the system
+    // header; cross-compiling has none, so link the from-source gmp (which
+    // installs gmp.h) to expose the header. The driver doesn't call gmp.
+    if (gmp) |l| exe.root_module.linkLibrary(l) else exe.root_module.linkSystemLibrary("gmp", .{});
 
     // Paths (from consumer repo)
     const config_path: std.Build.LazyPath = config.config_dir;
@@ -502,8 +545,19 @@ pub fn addGccDriver(
         "-DCONFIGURE_SPECS=\"\"",
         b.fmt("-DTARGET_NAME=\"{s}\"", .{config.target_canonical}),
         "-Wno-narrowing",
+        "-Wno-format",
         "-Wno-nontrivial-memaccess",
         "-Wno-unknown-warning-option",
+        "-Wno-array-bounds",
+        // See common_flags: Darwin clang promotes these to default errors.
+        "-Wno-error=deprecated-declarations",
+        "-Wno-error=inconsistent-missing-override",
+        "-Wno-error=tautological-compare",
+        "-Wno-error=varargs",
+        "-Wno-error=dangling-else",
+        "-Wno-error=shift-count-overflow",
+        "-Wno-error=format-nonliteral",
+        "-Wno-error=format-security",
         "-fno-exceptions",
         "-fno-rtti",
     };
@@ -1063,8 +1117,8 @@ const objs_files = [_][]const u8{
     "web.cc",
     "wide-int.cc",
     "wide-int-print.cc",
-    // host_hook_obj for linux
-    "config/host-linux.cc",
+    // host_hook_obj is added host-conditionally in addCc1 (host-linux.cc,
+    // config/i386/host-mingw32.cc, or host-darwin.cc).
 };
 
 // Generated files (from generated/rl78/)

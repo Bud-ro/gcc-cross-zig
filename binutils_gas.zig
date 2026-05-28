@@ -12,6 +12,16 @@ pub fn addGas(
     libs: Libs,
     config: CrossConfig,
 ) *std.Build.Step.Compile {
+    // Host capability profiles. Generators run native, but gas is an installed
+    // binary compiled for the toolchain's host_target, so gate host-specific
+    // macros here. mingw (Windows) lacks most POSIX/glibc extensions; Darwin is
+    // BSD-like (has POSIX, lacks glibc-isms like st_mtim and mempcpy).
+    const t = target.result;
+    const is_win = t.os.tag == .windows;
+    const glibc = t.isGnuLibC();
+    const posix: ?bool = if (is_win) null else true;
+    const gnu: ?bool = if (glibc) true else null;
+
     // gas/config.in keys (binutils 2.44)
     const gas_config_header = b.addConfigHeader(.{
         .style = .{ .autoconf_undef = binutils_root.path(b, "gas/config.in") },
@@ -42,24 +52,24 @@ pub fn addGas(
         .HAVE_CFPREFERENCESCOPYAPPVALUE = null,
         .HAVE_DCGETTEXT = null,
         .HAVE_DECL_GETOPT = true,
-        .HAVE_DECL_MEMPCPY = true,
-        .HAVE_DECL_STPCPY = true,
-        .HAVE_DLFCN_H = true,
+        .HAVE_DECL_MEMPCPY = gnu,
+        .HAVE_DECL_STPCPY = posix,
+        .HAVE_DLFCN_H = posix,
         .HAVE_GETTEXT = null,
         .HAVE_ICONV = null,
         .HAVE_INTTYPES_H = true,
-        .HAVE_LC_MESSAGES = true,
+        .HAVE_LC_MESSAGES = posix,
         .HAVE_MEMORY_H = true,
         .HAVE_STDINT_H = true,
         .HAVE_STDLIB_H = true,
         .HAVE_STRINGS_H = true,
         .HAVE_STRING_H = true,
-        .HAVE_STRSIGNAL = true,
-        .HAVE_ST_MTIM_TV_NSEC = true,
-        .HAVE_ST_MTIM_TV_SEC = true,
+        .HAVE_STRSIGNAL = posix,
+        .HAVE_ST_MTIM_TV_NSEC = gnu,
+        .HAVE_ST_MTIM_TV_SEC = gnu,
         .HAVE_SYS_STAT_H = true,
         .HAVE_SYS_TYPES_H = true,
-        .HAVE_TM_GMTOFF = true,
+        .HAVE_TM_GMTOFF = posix,
         .HAVE_UNISTD_H = true,
         .HAVE_WINDOWS_H = null,
         .HAVE_ZSTD = null,
@@ -78,7 +88,7 @@ pub fn addGas(
         .NDS32_DEFAULT_ZOL_EXT = null,
         .NDS32_LINUX_TOOLCHAIN = null,
         .NEED_DECLARATION_ENVIRON = null,
-        .NEED_DECLARATION_FFS = null,
+        .NEED_DECLARATION_FFS = if (is_win) true else null,
         .OBJ_MAYBE_AOUT = null,
         .OBJ_MAYBE_COFF = null,
         .OBJ_MAYBE_ECOFF = null,

@@ -12,6 +12,13 @@ pub fn addLd(
     libs: Libs,
     config: CrossConfig,
 ) *std.Build.Step.Compile {
+    // Host capability profiles -- see binutils_gas.zig for rationale. ld is an
+    // installed binary compiled for host_target; gate POSIX-only macros so the
+    // mingw (Windows) build doesn't reference missing headers/symbols.
+    const t = target.result;
+    const is_win = t.os.tag == .windows;
+    const posix: ?bool = if (is_win) null else true;
+
     // ld/config.in keys (binutils 2.44)
     const ld_config_header = b.addConfigHeader(.{
         .style = .{ .autoconf_undef = binutils_root.path(b, "ld/config.in") },
@@ -44,37 +51,37 @@ pub fn addLd(
         .HAVE_DCGETTEXT = null,
         .HAVE_DECL_ENVIRON = true,
         .HAVE_DECL_GETOPT = true,
-        .HAVE_DECL_STPCPY = true,
-        .HAVE_DLFCN_H = true,
+        .HAVE_DECL_STPCPY = posix,
+        .HAVE_DLFCN_H = posix,
         .HAVE_ELF_HINTS_H = null,
         .HAVE_FCNTL_H = true,
-        .HAVE_GETPAGESIZE = true,
+        .HAVE_GETPAGESIZE = posix,
         .HAVE_GETTEXT = null,
-        .HAVE_GLOB = true,
+        .HAVE_GLOB = posix,
         .HAVE_ICONV = null,
         .HAVE_INITFINI_ARRAY = true,
         .HAVE_INTTYPES_H = true,
         .HAVE_JANSSON = null,
-        .HAVE_LC_MESSAGES = true,
+        .HAVE_LC_MESSAGES = posix,
         .HAVE_LIMITS_H = true,
         .HAVE_LSEEK = true,
         .HAVE_MEMORY_H = true,
         .HAVE_MKSTEMP = true,
-        .HAVE_MMAP = true,
+        .HAVE_MMAP = posix,
         .HAVE_OPEN = true,
-        .HAVE_REALPATH = true,
+        .HAVE_REALPATH = posix,
         .HAVE_STDINT_H = true,
         .HAVE_STDLIB_H = true,
         .HAVE_STRINGS_H = true,
         .HAVE_STRING_H = true,
-        .HAVE_SYS_FILE_H = true,
-        .HAVE_SYS_MMAN_H = true,
+        .HAVE_SYS_FILE_H = posix,
+        .HAVE_SYS_MMAN_H = posix,
         .HAVE_SYS_PARAM_H = true,
         .HAVE_SYS_STAT_H = true,
         .HAVE_SYS_TIME_H = true,
         .HAVE_SYS_TYPES_H = true,
         .HAVE_UNISTD_H = true,
-        .HAVE_WAITPID = true,
+        .HAVE_WAITPID = posix,
         .HAVE_WINDOWS_H = null,
         .HAVE_ZSTD = null,
         .LT_OBJDIR = ".libs/",
