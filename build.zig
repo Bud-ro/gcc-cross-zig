@@ -12,6 +12,7 @@ pub const binutils_ld = @import("binutils_ld.zig");
 pub const binutils_tools = @import("binutils_tools.zig");
 pub const gcc_cc1 = @import("gcc_cc1.zig");
 pub const gen_tools = @import("gen_tools.zig");
+pub const libgcc = @import("libgcc.zig");
 
 pub const CrossConfig = cross_config.CrossConfig;
 pub const Libs = cross_config.Libs;
@@ -68,6 +69,12 @@ pub fn buildToolchain(
         // When a vendored dir is still present, register a regression check.
         if (config.generated_dir) |oracle| {
             gen_tools.addVerify(b, generated, oracle, &.{});
+        }
+
+        // libgcc (post-install): compile target runtime with the cross compiler.
+        // Exposed as `zig build libgcc` since it must run after the install step.
+        if (config.libgcc_tm_includes.len != 0) {
+            _ = libgcc.addLibgcc(b, gcc_root, generated.dir, config);
         }
     }
 

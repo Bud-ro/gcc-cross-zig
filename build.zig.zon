@@ -14,6 +14,7 @@
         "binutils_tools.zig",
         "gcc_cc1.zig",
         "gen_tools.zig",
+        "libgcc.zig",
         "find_replace.zig",
     },
 }

@@ -118,6 +118,19 @@ pub const CrossConfig = struct {
     gcc_common_out_file: []const u8 = "common/config/default-common.cc",
 
     // -----------------------------------------------------------------
+    // libgcc (built post-install with the cross compiler)
+    // -----------------------------------------------------------------
+
+    /// Extra libgcc sources (LIB2ADD), paths relative to libgcc/ in the GCC
+    /// source. e.g. "config/rx/rx-abi-functions.c". Generic ones like
+    /// enable-execute-stack.c are added automatically.
+    libgcc_lib2add: []const []const u8 = &.{},
+    /// Headers concatenated into the synthesized libgcc_tm.h, as include paths
+    /// relative to libgcc/ (the target's libgcc_tm_file additions),
+    /// e.g. "config/rx/rx-abi.h".
+    libgcc_tm_includes: []const []const u8 = &.{},
+
+    // -----------------------------------------------------------------
     // Include paths for binutils (gas, ld, tools)
     // -----------------------------------------------------------------
 
