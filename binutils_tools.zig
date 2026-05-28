@@ -12,10 +12,12 @@ pub fn addTools(
     libs: Libs,
     config: CrossConfig,
 ) *std.Build.Step.Compile {
-    // binutils/config.in keys (binutils 2.42)
+    // binutils/config.in keys (binutils 2.42/2.44)
     const binutils_config_header = b.addConfigHeader(.{
         .style = .{ .autoconf_undef = binutils_root.path(b, "binutils/config.in") },
     }, .{
+        .AC_APPLE_UNIVERSAL_BUILD = null,
+        .WORDS_BIGENDIAN = if (target.result.cpu.arch.endian() == .big) @as(i64, 1) else null,
         .DEFAULT_AR_DETERMINISTIC = @as(i64, 0),
         .DEFAULT_FOR_COLORED_DISASSEMBLY = @as(i64, 0),
         .DEFAULT_FOR_FOLLOW_LINKS = @as(i64, 1),
@@ -28,7 +30,6 @@ pub fn addTools(
         .HAVE_CFLOCALECOPYPREFERREDLANGUAGES = null,
         .HAVE_CFPREFERENCESCOPYAPPVALUE = null,
         .HAVE_DCGETTEXT = null,
-        .HAVE_DECL_ASPRINTF = true,
         .HAVE_DECL_ENVIRON = true,
         .HAVE_DECL_GETC_UNLOCKED = true,
         .HAVE_DECL_GETOPT = true,
