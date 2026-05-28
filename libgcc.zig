@@ -73,33 +73,56 @@ pub fn addLibgcc(
     }
     lib2add.appendSlice(b.allocator, "enable-execute-stack.c") catch @panic("OOM");
 
+    // Selected extra multilib dirs (default "." is always built).
+    var sel: std.ArrayList(u8) = .empty;
+    for (config.libgcc_multilib_dirs) |d| {
+        sel.appendSlice(b.allocator, d) catch @panic("OOM");
+        sel.appendSlice(b.allocator, " ") catch @panic("OOM");
+    }
+
     const script = b.fmt(
         \\set -e
         \\PREFIX="{0s}"; GCCROOT="$1"; GEN="$2"; CFG="$3"
         \\GCC="$PREFIX/bin/{1s}-gcc"; AR="$PREFIX/bin/{1s}-ar"
-        \\LIBDIR="$PREFIX/{2s}"
+        \\LIBROOT="$PREFIX/{2s}"
         \\GINC="$("$GCC" -print-file-name=include)"
         \\LG="$GCCROOT/libgcc"
-        \\W="$PREFIX/.libgcc-obj"; rm -rf "$W"; mkdir -p "$W" "$LIBDIR"
-        \\: > "$W/libgcc_tm.h"; for h in {3s}; do echo "#include \"$h\"" >> "$W/libgcc_tm.h"; done
-        \\INC="-I$W -I$CFG -I$GEN -I$LG -I$LG/config/{4s} -I$GCCROOT/gcc -I$GCCROOT/include -isystem $GINC"
-        \\F="-O2 -DIN_GCC -DIN_LIBGCC2 -fbuilding-libgcc -fno-stack-protector -Dinhibit_libc -fexceptions -fnon-call-exceptions"
-        \\# Per-function compiles are tolerant: routines for modes this multilib
-        \\# does not support (e.g. DF/XF/TF when double is 32-bit) fail to compile
-        \\# and are skipped, exactly as GCC filters by available modes.
-        \\for f in {5s} {6s} {7s}; do "$GCC" $F $INC -DL$f -c "$LG/libgcc2.c" -o "$W/$f.o" 2>/dev/null || echo "  skip $f"; done
-        \\for f in {8s}; do "$GCC" $F $INC -DFINE_GRAINED_LIBRARIES -DFLOAT -DL$f -c "$LG/fp-bit.c" -o "$W/$f.o" 2>/dev/null || echo "  skip $f"; done
-        \\for f in {9s}; do "$GCC" $F $INC -DFINE_GRAINED_LIBRARIES -DL$f -c "$LG/fp-bit.c" -o "$W/$f.o" 2>/dev/null || echo "  skip $f"; done
-        \\i=0; for s in {10s}; do
-        \\  "$GCC" $F $INC -c "$LG/$s" -o "$W/lib2add_$i.o" 2>/dev/null || echo "  skip $s"; i=$((i+1))
+        \\SEL="{11s}"
+        \\
+        \\# Build libgcc.a + crt*.o for one multilib variant.
+        \\# $1 = multilib dir (from -print-multi-directory), $2 = its extra flags.
+        \\build_variant() {{
+        \\  MDIR="$1"; MFLAGS="$2"
+        \\  if [ "$MDIR" = "." ]; then VDIR="$LIBROOT"; else VDIR="$LIBROOT/$MDIR"; fi
+        \\  W="$VDIR/.obj"; rm -rf "$W"; mkdir -p "$W" "$VDIR"
+        \\  : > "$W/libgcc_tm.h"; for h in {3s}; do echo "#include \"$h\"" >> "$W/libgcc_tm.h"; done
+        \\  INC="-I$W -I$CFG -I$GEN -I$LG -I$LG/config/{4s} -I$GCCROOT/gcc -I$GCCROOT/include -isystem $GINC"
+        \\  F="-O2 -DIN_GCC -DIN_LIBGCC2 -fbuilding-libgcc -fno-stack-protector -Dinhibit_libc -fexceptions -fnon-call-exceptions $MFLAGS"
+        \\  # Per-function compiles are tolerant: routines for modes this variant
+        \\  # lacks (e.g. DF when double is 32-bit) fail and are skipped, exactly
+        \\  # as GCC filters by available modes.
+        \\  for f in {5s} {6s} {7s}; do "$GCC" $F $INC -DL$f -c "$LG/libgcc2.c" -o "$W/$f.o" 2>/dev/null || true; done
+        \\  for f in {8s}; do "$GCC" $F $INC -DFINE_GRAINED_LIBRARIES -DFLOAT -DL$f -c "$LG/fp-bit.c" -o "$W/$f.o" 2>/dev/null || true; done
+        \\  for f in {9s}; do "$GCC" $F $INC -DFINE_GRAINED_LIBRARIES -DL$f -c "$LG/fp-bit.c" -o "$W/$f.o" 2>/dev/null || true; done
+        \\  i=0; for s in {10s}; do "$GCC" $F $INC -c "$LG/$s" -o "$W/lib2add_$i.o" 2>/dev/null || true; i=$((i+1)); done
+        \\  "$AR" rcs "$VDIR/libgcc.a" "$W"/*.o
+        \\  N=$("$AR" t "$VDIR/libgcc.a" | wc -l); rm -rf "$W"
+        \\  # crtbegin/crtend are best-effort (RX hits an assembler .size quirk;
+        \\  # only needed for C++ static ctors / exception frames).
+        \\  "$GCC" $F $INC -g0 -DCRT_BEGIN -c "$LG/crtstuff.c" -o "$VDIR/crtbegin.o" 2>/dev/null || true
+        \\  "$GCC" $F $INC -g0 -DCRT_END -c "$LG/crtstuff.c" -o "$VDIR/crtend.o" 2>/dev/null || true
+        \\  echo "libgcc.a [$MDIR]: $N objects"
+        \\  [ "$N" -ge 40 ] || {{ echo "ERROR: libgcc.a [$MDIR] only $N objects -- build broken"; exit 1; }}
+        \\}}
+        \\
+        \\build_variant "." ""
+        \\# Extra multilib variants: recover each variant's flags from -print-multi-lib.
+        \\for line in $("$GCC" -print-multi-lib); do
+        \\  d="${{line%%;*}}"; o="${{line#*;}}"
+        \\  [ "$d" = "." ] && continue
+        \\  case " $SEL " in *" @all "*|*" $d "*) ;; *) continue;; esac
+        \\  build_variant "$d" "$(printf '%s' "$o" | sed 's/@/ -/g')"
         \\done
-        \\"$AR" rcs "$LIBDIR/libgcc.a" "$W"/*.o
-        \\# crtbegin/crtend provide C++ static ctor/dtor + exception-frame
-        \\# registration; bare-metal C firmware does not require them. They hit
-        \\# an RX assembler .size quirk, so treat them as best-effort.
-        \\"$GCC" $F $INC -g0 -DCRT_BEGIN -c "$LG/crtstuff.c" -o "$LIBDIR/crtbegin.o" 2>/dev/null || echo "  skip crtbegin.o"
-        \\"$GCC" $F $INC -g0 -DCRT_END -c "$LG/crtstuff.c" -o "$LIBDIR/crtend.o" 2>/dev/null || echo "  skip crtend.o"
-        \\echo "libgcc.a: $("$AR" t "$LIBDIR/libgcc.a" | wc -l) objects"
     , .{
         b.install_path, // 0
         config.target_triple, // 1
@@ -112,6 +135,7 @@ pub fn addLibgcc(
         fpbit_funcs, // 8
         dpbit_funcs, // 9
         lib2add.items, // 10
+        sel.items, // 11
     });
 
     const run = b.addSystemCommand(&.{ "sh", "-c", script, "_" });

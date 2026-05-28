@@ -129,6 +129,12 @@ pub const CrossConfig = struct {
     /// relative to libgcc/ (the target's libgcc_tm_file additions),
     /// e.g. "config/rx/rx-abi.h".
     libgcc_tm_includes: []const []const u8 = &.{},
+    /// Multilib directories (as printed by `gcc -print-multi-directory`) to
+    /// build libgcc for, beyond the default "." which is always built. Each is
+    /// matched against `gcc -print-multi-lib` to recover its flags and is
+    /// installed into lib/gcc/<target>/<version>/<dir>/. Empty = default only.
+    /// Set to &.{"@all"} to build every multilib variant (slow).
+    libgcc_multilib_dirs: []const []const u8 = &.{},
 
     // -----------------------------------------------------------------
     // Include paths for binutils (gas, ld, tools)
