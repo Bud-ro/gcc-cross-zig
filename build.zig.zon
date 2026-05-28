@@ -13,6 +13,7 @@
         "binutils_ld.zig",
         "binutils_tools.zig",
         "gcc_cc1.zig",
+        "gen_tools.zig",
         "find_replace.zig",
     },
 }
