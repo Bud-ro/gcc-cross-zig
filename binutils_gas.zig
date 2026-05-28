@@ -96,7 +96,7 @@ pub fn addGas(
         .STDC_HEADERS = true,
         .STRICTCOFF = null,
         .TARGET_ALIAS = config.target_triple,
-        .TARGET_BYTES_BIG_ENDIAN = @as(i64, 0),
+        .TARGET_BYTES_BIG_ENDIAN = @as(i64, if (config.target_big_endian) 1 else 0),
         .TARGET_CANONICAL = config.target_canonical,
         .TARGET_CPU = config.target_cpu,
         .TARGET_OS = config.target_os,

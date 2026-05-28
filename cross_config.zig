@@ -16,6 +16,8 @@ pub const CrossConfig = struct {
     target_os: []const u8,
     /// Target vendor component, e.g. "unknown"
     target_vendor: []const u8,
+    /// Default byte order of the target (for GAS TARGET_BYTES_BIG_ENDIAN)
+    target_big_endian: bool = false,
 
     /// Binutils version for config headers
     binutils_version: std.SemanticVersion,

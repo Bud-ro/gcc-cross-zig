@@ -146,12 +146,7 @@ pub fn buildToolchain(
         b.getInstallStep().dependOn(&install.step);
     }
 
-    // Create lib/gcc/<target>/<version>/ (the GCC install prefix).
-    // The driver resolves relative paths from this directory; it must exist.
     const lib_gcc_dir = b.fmt("lib/gcc/{s}/{s}", .{ config.target_canonical, config.gcc_version });
-    const mkdir_step = b.addSystemCommand(&.{ "mkdir", "-p" });
-    mkdir_step.addArg(b.fmt("{s}/{s}", .{ b.install_path, lib_gcc_dir }));
-    b.getInstallStep().dependOn(&mkdir_step.step);
 
     // Install GCC internal headers (stdarg.h, stddef.h, etc.) to
     // lib/gcc/<target>/<version>/include/ so the driver finds them

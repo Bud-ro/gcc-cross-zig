@@ -21,7 +21,9 @@ pub fn main(init: std.process.Init.Minimal) !void {
         const fp = c.fopen(input_path.ptr, "rb") orelse return error.OpenFailed;
         defer _ = c.fclose(fp);
         _ = c.fseek(fp, 0, c.SEEK_END);
-        const size: usize = @intCast(c.ftell(fp));
+        const pos = c.ftell(fp);
+        if (pos < 0) return error.TellFailed;
+        const size: usize = @intCast(pos);
         _ = c.fseek(fp, 0, c.SEEK_SET);
         const buf = try allocator.alloc(u8, size);
         const n = c.fread(buf.ptr, 1, size, fp);
@@ -34,5 +36,6 @@ pub fn main(init: std.process.Init.Minimal) !void {
     // Write output file
     const fp = c.fopen(output_path.ptr, "wb") orelse return error.OpenFailed;
     defer _ = c.fclose(fp);
-    _ = c.fwrite(output.ptr, 1, output.len, fp);
+    const written = c.fwrite(output.ptr, 1, output.len, fp);
+    if (written != output.len) return error.WriteFailed;
 }
