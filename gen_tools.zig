@@ -572,9 +572,14 @@ pub fn addGenerated(
         \\        configuration_arguments}};
         \\
     , .{ .maj = ver.major, .min = ver.minor, .pat = ver.patch, .ver = config.gcc_version, .date = config.gcc_datestamp })), "plugin-version.h");
-    // cc1-checksum.cc: PCH-consistency checksum. The value is not load-bearing
-    // for codegen; genchecksum would compute it from the linked objects, but a
-    // fixed placeholder suffices for a cross-compiler that does not ship PCH.
+    // cc1-checksum.cc: the executable_checksum cc1 stamps into any PCH it
+    // creates and checks on load. It does not affect codegen. Upstream's
+    // genchecksum derives it from the linked cc1 objects; we use a fixed value.
+    // Caveat: a constant checksum means PCH files are not bound to a specific
+    // cc1 build, so PCH created by one cc1 would be accepted by a different
+    // one. Acceptable here (this toolchain targets bare-metal firmware and is
+    // not expected to produce/consume PCH); revisit with a real genchecksum
+    // pass if PCH support is ever needed.
     _ = final.addCopyFile(aux_wf.add("cc1-checksum.cc",
         \\#include "config.h"
         \\#include "system.h"
