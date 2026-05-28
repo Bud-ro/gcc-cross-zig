@@ -87,6 +87,14 @@ pub fn buildToolchain(
         ._POSIX_PTHREAD_SEMANTICS = true,
         ._TANDEM_SOURCE = true,
         .__EXTENSIONS__ = true,
+        ._FILE_OFFSET_BITS = null,
+        ._LARGE_FILES = null,
+        ._MINIX = null,
+        ._POSIX_1_SOURCE = null,
+        ._POSIX_SOURCE = null,
+        ._UINT64_T = null,
+        .int64_t = null,
+        .uint64_t = null,
     });
     const lto_plugin = b.addLibrary(.{
         .linkage = .dynamic,
