@@ -148,6 +148,25 @@ pub const CrossConfig = struct {
     /// Path to find_replace.zig tool (from gcc-cross-zig)
     find_replace_zig: std.Build.LazyPath,
 
+    // -----------------------------------------------------------------
+    // From-source support libraries (optional)
+    //
+    // When set, these dependencies are compiled from source and statically
+    // linked into binutils/cc1 instead of using the host's system libraries.
+    // Required for cross-compiling the toolchain to a host (Windows/macOS)
+    // that has no system libz/gmp/mpfr/mpc. When null, the build falls back
+    // to linkSystemLibrary (the native-Linux path).
+    // -----------------------------------------------------------------
+
+    /// zlib source dependency (madler/zlib). Linked by binutils and cc1.
+    zlib_src: ?*std.Build.Dependency = null,
+    /// GMP source dependency. Linked by cc1.
+    gmp_src: ?*std.Build.Dependency = null,
+    /// MPFR source dependency. Linked by cc1.
+    mpfr_src: ?*std.Build.Dependency = null,
+    /// MPC source dependency. Linked by cc1.
+    mpc_src: ?*std.Build.Dependency = null,
+
     /// Override for GCC source root. When set, cc1 compilation uses this
     /// directory instead of gcc_src.path("."). Use with addWriteFiles +
     /// addCopyDirectory to create a patched source tree.
@@ -208,4 +227,15 @@ pub const Libs = struct {
     bfdver_header: *std.Build.Step.ConfigHeader,
     libbfd_config_header: *std.Build.Step.ConfigHeader,
     libopcodes: *std.Build.Step.Compile,
+    /// From-source zlib. When null, dependents fall back to linkSystemLibrary("z").
+    zlib: ?*std.Build.Step.Compile = null,
+};
+
+/// From-source support libraries linked into cc1. Each is null when the build
+/// should fall back to the host's system library (the native-Linux path).
+pub const SupportLibs = struct {
+    zlib: ?*std.Build.Step.Compile = null,
+    gmp: ?*std.Build.Step.Compile = null,
+    mpfr: ?*std.Build.Step.Compile = null,
+    mpc: ?*std.Build.Step.Compile = null,
 };

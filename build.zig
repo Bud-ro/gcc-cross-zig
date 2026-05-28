@@ -13,6 +13,7 @@ pub const binutils_tools = @import("binutils_tools.zig");
 pub const gcc_cc1 = @import("gcc_cc1.zig");
 pub const gen_tools = @import("gen_tools.zig");
 pub const libgcc = @import("libgcc.zig");
+pub const zlib = @import("zlib.zig");
 
 pub const CrossConfig = cross_config.CrossConfig;
 pub const Libs = cross_config.Libs;
@@ -32,6 +33,13 @@ pub fn buildToolchain(
     else
         binutils_src.path(".");
 
+    // From-source zlib (optional): linked into binutils + cc1 so the toolchain
+    // can target a host without a system libz. Built for the host target.
+    const zlib_lib: ?*std.Build.Step.Compile = if (config.zlib_src) |dep|
+        zlib.addZlib(b, dep.path("."), host_target, optimize)
+    else
+        null;
+
     // Build libraries
     const iberty = binutils_libs.addLibiberty(b, binutils_root, host_target, optimize);
     const libsframe = binutils_libs.addLibsframe(b, binutils_root, host_target, optimize, config);
@@ -46,6 +54,7 @@ pub fn buildToolchain(
         .bfdver_header = bfd_result.bfdver_header,
         .libbfd_config_header = bfd_result.libbfd_config_header,
         .libopcodes = libopcodes,
+        .zlib = zlib_lib,
     };
 
     // Build binutils executables
@@ -79,7 +88,8 @@ pub fn buildToolchain(
     }
 
     // Build GCC cc1 and driver
-    _ = gcc_cc1.addCc1(b, gcc_src, host_target, optimize, iberty, config, gen_dir, gt_dir);
+    const support_libs = cross_config.SupportLibs{ .zlib = zlib_lib };
+    _ = gcc_cc1.addCc1(b, gcc_src, host_target, optimize, iberty, config, gen_dir, gt_dir, support_libs);
     _ = gcc_cc1.addGccDriver(b, gcc_src, host_target, optimize, iberty, config, gen_dir);
 
     // Build LTO plugin (shared library loaded by the linker)

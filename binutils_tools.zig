@@ -211,7 +211,7 @@ pub fn addTools(
             exe.root_module.linkLibrary(libs.libopcodes);
         }
         exe.root_module.linkLibrary(libs.iberty);
-        exe.root_module.linkSystemLibrary("z", .{});
+        if (libs.zlib) |z| exe.root_module.linkLibrary(z) else exe.root_module.linkSystemLibrary("z", .{});
 
         exe.root_module.addIncludePath(binutils_root.path(b, "binutils"));
         exe.root_module.addIncludePath(binutils_root.path(b, "include"));

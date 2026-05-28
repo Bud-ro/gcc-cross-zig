@@ -145,7 +145,7 @@ pub fn addGas(
     gas.root_module.linkLibrary(libs.libopcodes);
     gas.root_module.linkLibrary(libs.iberty);
     gas.root_module.linkLibrary(libs.libsframe);
-    gas.root_module.linkSystemLibrary("z", .{});
+    if (libs.zlib) |z| gas.root_module.linkLibrary(z) else gas.root_module.linkSystemLibrary("z", .{});
 
     gas.root_module.addIncludePath(binutils_root.path(b, "gas"));
     gas.root_module.addIncludePath(binutils_root.path(b, "gas/config"));

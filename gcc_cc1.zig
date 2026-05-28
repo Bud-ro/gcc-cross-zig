@@ -162,6 +162,8 @@ pub fn addCc1(
     // vendored config.generated_dir. gt_dir holds the gt-*.h headers.
     gen_dir: ?std.Build.LazyPath,
     gt_dir: ?std.Build.LazyPath,
+    // From-source support libraries; null fields fall back to system libs.
+    support: cross_config.SupportLibs,
 ) *std.Build.Step.Compile {
     const libdecnumber = addLibdecnumber(b, gcc_src, target, optimize, config);
     const libcpp = addLibcpp(b, gcc_src, target, optimize, config);
@@ -183,11 +185,13 @@ pub fn addCc1(
     exe.root_module.linkLibrary(libcody);
     exe.root_module.linkLibrary(iberty);
 
-    // System math/compression libraries
-    exe.root_module.linkSystemLibrary("gmp", .{});
-    exe.root_module.linkSystemLibrary("mpfr", .{});
-    exe.root_module.linkSystemLibrary("mpc", .{});
-    exe.root_module.linkSystemLibrary("z", .{});
+    // Math/compression libraries: prefer from-source static libs (so the
+    // toolchain can target a host with no system gmp/mpfr/mpc/z); otherwise
+    // fall back to the host's system libraries.
+    if (support.gmp) |l| exe.root_module.linkLibrary(l) else exe.root_module.linkSystemLibrary("gmp", .{});
+    if (support.mpfr) |l| exe.root_module.linkLibrary(l) else exe.root_module.linkSystemLibrary("mpfr", .{});
+    if (support.mpc) |l| exe.root_module.linkLibrary(l) else exe.root_module.linkSystemLibrary("mpc", .{});
+    if (support.zlib) |l| exe.root_module.linkLibrary(l) else exe.root_module.linkSystemLibrary("z", .{});
 
     // Paths for vendored config and generated files (from consumer repo)
     const config_path: std.Build.LazyPath = config.config_dir;

@@ -133,7 +133,7 @@ pub fn addLd(
     ld.root_module.linkLibrary(libs.libopcodes);
     ld.root_module.linkLibrary(libs.iberty);
     ld.root_module.linkLibrary(libs.libsframe);
-    ld.root_module.linkSystemLibrary("z", .{});
+    if (libs.zlib) |z| ld.root_module.linkLibrary(z) else ld.root_module.linkSystemLibrary("z", .{});
 
     ld.root_module.addIncludePath(binutils_root.path(b, "ld"));
     ld.root_module.addIncludePath(binutils_root.path(b, "include"));
