@@ -19,7 +19,14 @@ const lib2funcs =
     "_ffsdi2 _clz _clzsi2 _clzdi2 _ctzsi2 _ctzdi2 _popcount_tab _popcountsi2 " ++
     "_popcountdi2 _paritysi2 _paritydi2 _powisf2 _powidf2 _powixf2 _powitf2 " ++
     "_mulhc3 _mulsc3 _muldc3 _mulxc3 _multc3 _divhc3 _divsc3 _divdc3 _divxc3 " ++
-    "_divtc3 _bswapsi2 _bswapdi2 _clrsbsi2 _clrsbdi2 _mulbitint3";
+    "_divtc3 _bswapsi2 _bswapdi2 _clrsbsi2 _clrsbdi2 _mulbitint3 " ++
+    // Float<->integer conversion routines (swfloatfuncs si + dwfloatfuncs di).
+    // Routines for modes a multilib lacks are skipped at compile time.
+    "_fixunssfsi _fixunsdfsi _fixunsxfsi " ++
+    "_fixsfdi _fixdfdi _fixxfdi _fixtfdi " ++
+    "_fixunssfdi _fixunsdfdi _fixunsxfdi _fixunstfdi " ++
+    "_floatdisf _floatdidf _floatdixf _floatditf " ++
+    "_floatundisf _floatundidf _floatundixf _floatunditf";
 
 // LIB2_DIVMOD_FUNCS.
 const divmod_funcs =
@@ -81,8 +88,8 @@ pub fn addLibgcc(
         \\# does not support (e.g. DF/XF/TF when double is 32-bit) fail to compile
         \\# and are skipped, exactly as GCC filters by available modes.
         \\for f in {5s} {6s} {7s}; do "$GCC" $F $INC -DL$f -c "$LG/libgcc2.c" -o "$W/$f.o" 2>/dev/null || echo "  skip $f"; done
-        \\for f in {8s}; do "$GCC" $F $INC -DFLOAT -DL$f -c "$LG/fp-bit.c" -o "$W/$f.o" 2>/dev/null || echo "  skip $f"; done
-        \\for f in {9s}; do "$GCC" $F $INC -DL$f -c "$LG/fp-bit.c" -o "$W/$f.o" 2>/dev/null || echo "  skip $f"; done
+        \\for f in {8s}; do "$GCC" $F $INC -DFINE_GRAINED_LIBRARIES -DFLOAT -DL$f -c "$LG/fp-bit.c" -o "$W/$f.o" 2>/dev/null || echo "  skip $f"; done
+        \\for f in {9s}; do "$GCC" $F $INC -DFINE_GRAINED_LIBRARIES -DL$f -c "$LG/fp-bit.c" -o "$W/$f.o" 2>/dev/null || echo "  skip $f"; done
         \\i=0; for s in {10s}; do
         \\  "$GCC" $F $INC -c "$LG/$s" -o "$W/lib2add_$i.o" 2>/dev/null || echo "  skip $s"; i=$((i+1))
         \\done
