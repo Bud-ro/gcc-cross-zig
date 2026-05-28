@@ -16,5 +16,9 @@
         "gen_tools.zig",
         "libgcc.zig",
         "find_replace.zig",
+        "zlib.zig",
+        "gmp.zig",
+        "mpfr.zig",
+        "mpc.zig",
     },
 }
