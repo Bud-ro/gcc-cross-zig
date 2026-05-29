@@ -136,6 +136,8 @@ pub fn addGas(
         .root_module = b.createModule(.{
             .target = target,
             .optimize = optimize,
+            // Strip debug info from release binaries; keep it for Debug builds.
+            .strip = optimize != .Debug,
             .link_libc = true,
         }),
     });

@@ -183,6 +183,8 @@ pub fn buildToolchain(
         .root_module = b.createModule(.{
             .target = host_target,
             .optimize = optimize,
+            // Strip debug info from release binaries; keep it for Debug builds.
+            .strip = optimize != .Debug,
             .link_libc = true,
         }),
     });
@@ -219,7 +221,11 @@ pub fn buildToolchain(
 
     // Install tooldir layout: <target_canonical>/bin/{as,ld,ar}
     // The GCC driver searches for assembler/linker here via TOOLDIR_BASE_PREFIX.
+    // The driver appends the host executable suffix when probing, so a Windows
+    // host must install them as as.exe/ld.exe/ar.exe or the driver won't find
+    // them and silently falls back to the system assembler.
     const tooldir = b.fmt("{s}/bin", .{config.target_canonical});
+    const exe_suffix = host_target.result.exeFileExt();
     inline for (.{
         .{ gas, "as" },
         .{ ld, "ld" },
@@ -227,7 +233,7 @@ pub fn buildToolchain(
     }) |entry| {
         const install = b.addInstallArtifact(entry[0], .{
             .dest_dir = .{ .override = .{ .custom = tooldir } },
-            .dest_sub_path = entry[1],
+            .dest_sub_path = b.fmt("{s}{s}", .{ entry[1], exe_suffix }),
         });
         b.getInstallStep().dependOn(&install.step);
     }

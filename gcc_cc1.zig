@@ -174,6 +174,8 @@ pub fn addCc1(
         .root_module = b.createModule(.{
             .target = target,
             .optimize = optimize,
+            // Strip debug info from release binaries; keep it for Debug builds.
+            .strip = optimize != .Debug,
             .link_libc = true,
             .link_libcpp = true,
         }),
@@ -492,6 +494,8 @@ pub fn addGccDriver(
         .root_module = b.createModule(.{
             .target = target,
             .optimize = optimize,
+            // Strip debug info from release binaries; keep it for Debug builds.
+            .strip = optimize != .Debug,
             .link_libc = true,
             .link_libcpp = true,
         }),

@@ -553,9 +553,9 @@ pub fn addLibbfd(
         .style = .{ .autoconf_at = binutils_root.path(b, "bfd/version.h") },
         .include_path = "bfdver.h",
     }, .{
-        .bfd_version = @as(i64, 242000000),
+        .bfd_version = @as(i64, 244000000),
         .bfd_version_package = "\"(GNU Binutils) \"",
-        .bfd_version_string = "\"2.42\"",
+        .bfd_version_string = "\"2.44\"",
         .report_bugs_to = "\"<https://sourceware.org/bugzilla/>\"",
     });
 
